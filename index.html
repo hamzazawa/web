@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Check eFootball AI Pro - تقييم الحسابات</title>
+    <title>CHECK EFOOTBALL AI Pro - تقييم الحسابات</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -75,7 +75,17 @@
     </footer>
 
     <script>
-        const API_KEY = "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"; // تم دمج المفتاح لسهولة القراءة
+        // 🔥 مصفوفة المفاتيح: 6 مفاتيح للعمل المتواصل (Load Balancing) 🔥
+        const GROQ_API_KEYS = [
+            "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",
+            "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",
+            "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",
+            "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",
+            "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",
+            "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"
+        ];
+        
+        let currentKeyIndex = 0; // متغير يتتبع المفتاح النشط حالياً
 
         const fileInput = document.getElementById('file-input');
         const preview = document.getElementById('preview');
@@ -101,7 +111,6 @@
             }
         };
 
-        // دالة تحويل العملة
         function formatCurrency(priceInMad) {
             const selectedOption = currencySelector.options[currencySelector.selectedIndex];
             const rate = parseFloat(selectedOption.getAttribute('data-rate'));
@@ -110,7 +119,6 @@
 
             let converted = priceInMad * rate;
             
-            // تنسيق الأرقام (أرقام عشرية للدولار وتونس، وأرقام صحيحة للباقي)
             if(currencyVal === 'USD' || currencyVal === 'TND') {
                 return converted.toFixed(2) + ' ' + symbol;
             } else {
@@ -118,7 +126,6 @@
             }
         }
 
-        // خوارزمية التسعير الأساسية (بالدرهم)
         function calculatePlayerPriceMAD(r, isPremium) {
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
@@ -178,17 +185,24 @@
             reportContent.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10">
                     <div class="loader mb-4 border-blue-400 border-t-blue-600 w-10 h-10 border-4"></div>
-                    <p class="text-blue-400 font-bold">جاري استخراج طاقات 23 لاعباً...</p>
+                    <p class="text-blue-400 font-bold">جاري استخراج البيانات وتقييم الحساب...</p>
                 </div>
             `;
 
             const base64Image = preview.src;
 
-            try {
+            // دالة الاتصال المدمجة بنظام الدوران التلقائي للهروب من الحد المجاني
+            async function fetchWithRotation(retryCount = 0) {
+                if (retryCount >= GROQ_API_KEYS.length) {
+                    throw new Error("⚠️ عذراً، جميع خوادمنا مشغولة حالياً لضغط الاستخدام. يرجى العودة والمحاولة لاحقاً!");
+                }
+
+                const activeKey = GROQ_API_KEYS[currentKeyIndex];
+
                 const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${API_KEY}`,
+                        'Authorization': `Bearer ${activeKey}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -205,8 +219,20 @@
                     })
                 });
 
+                // إذا انتهى رصيد المفتاح الحالي، انتقل للمفتاح التالي وحاول مجدداً فوراً
+                if (response.status === 429 || response.status === 402) {
+                    console.warn(`المفتاح رقم ${currentKeyIndex + 1} استُهلك. الانتقال للمفتاح التالي...`);
+                    currentKeyIndex = (currentKeyIndex + 1) % GROQ_API_KEYS.length;
+                    return fetchWithRotation(retryCount + 1);
+                }
+
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error?.message || "Error");
+                return result;
+            }
+
+            try {
+                const result = await fetchWithRotation();
 
                 let aiText = result.choices[0].message.content;
                 let jsonString = aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1);
@@ -241,7 +267,6 @@
                     let pMad = calculatePlayerPriceMAD(rNum, isPremium);
                     playersTotalMAD += pMad;
                     
-                    // السعر المنسق للواجهة بناءً على العملة
                     let displayPrice = formatCurrency(pMad);
 
                     ratingsHtml += `<div class="glass-card rounded-xl p-2 flex flex-col items-center justify-center hover:bg-blue-900/30 transition-colors border border-gray-700 hover:border-blue-500">
@@ -266,7 +291,6 @@
                 let finalPriceMAD = playersTotalMAD + bonusMAD + jitterMAD;
                 if(finalPriceMAD < 0) finalPriceMAD = 0; 
 
-                // تحويل المبالغ النهائية للعملة المختارة
                 let finalDisplayPrice = formatCurrency(finalPriceMAD);
                 let bonusDisplayPrice = formatCurrency(bonusMAD);
 
