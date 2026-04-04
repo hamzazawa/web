@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين (وضع التجربة)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -37,7 +37,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +19 🚀 (طباعة الأخطاء)</span>
+            <span>ابدأ التحليل +20 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -110,7 +110,7 @@
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري الاتصال بالخادم...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يقرأ البيانات... يرجى الانتظار.</p>";
+            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>يتم الآن معالجة الصورة مجاناً... يرجى الانتظار.</p>";
 
             const base64Image = preview.src;
 
@@ -122,7 +122,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "meta-llama/llama-3.2-11b-vision-instruct:free",
+                        // استخدمنا هذا الموديل لأنه مجاني ومستقر جداً في OpenRouter
+                        model: "google/gemini-1.5-flash:free",
                         messages: [
                             {
                                 role: "user",
@@ -132,13 +133,11 @@
                                 ]
                             }
                         ]
-                        // تم إزالة response_format مؤقتاً لأن بعض موديلات Llama Vision المجانية لا تدعمها وتسبب خطأ 400
                     })
                 });
 
                 const result = await response.json();
                 
-                // صيد الأخطاء التفصيلي من OpenRouter
                 if (!response.ok) {
                     throw new Error(`HTTP Error ${response.status}: ` + (result.error?.message || JSON.stringify(result)));
                 }
@@ -149,7 +148,6 @@
 
                 let aiText = result.choices[0].message.content;
                 
-                // محاولة تنظيف الرد إذا أرسل الموديل نصوصاً مع الـ JSON
                 let jsonString = aiText;
                 let startIndex = aiText.indexOf('{');
                 let endIndex = aiText.lastIndexOf('}');
@@ -203,7 +201,6 @@
                     </div>
                 </div>`;
             } catch (e) {
-                // وضع المطور: طباعة الخطأ باللون الأخضر داخل خلفية سوداء لسهولة قراءته
                 reportContent.innerHTML = `
                 <div class="bg-red-900/40 border border-red-500 p-4 rounded-xl text-right">
                     <p class='text-red-400 font-bold mb-2 text-sm'>❌ حدث خطأ برمجي (سجل الأخطاء):</p>
@@ -214,7 +211,7 @@
                 console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +19 🚀 (طباعة الأخطاء)';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +20 🚀';
             }
         };
     </script>
