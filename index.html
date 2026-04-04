@@ -38,7 +38,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +13 🚀 (تسعير اللاعبين)</span>
+            <span>ابدأ التحليل +14 🚀 (نظام التتبع)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -75,22 +75,22 @@
             }
         };
 
-        // خوارزمية تسعير اللاعب الواحد التي صممتها أنت!
+        // خوارزمية التسعير الخاصة بك
         function calculatePlayerPrice(r) {
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
             
             if (rating < 100) return 2;
-            if (rating === 100) return 3; // تحت 101
+            if (rating === 100) return 3;
             if (rating === 101) return 4;
-            if (rating === 102) return 4; // 102
-            if (rating === 103) return 5; // 103
-            if (rating === 104) return 7; // تحت 105 (تأويل)
-            if (rating === 105) return 30; // تحت 106
-            if (rating === 106) return 35; // تحت 107
-            if (rating === 107) return 40; // تحت 108
-            if (rating === 108) return 48; // 108
-            if (rating > 108) return 52;   // فوق 108 أو 107
+            if (rating === 102) return 4; 
+            if (rating === 103) return 5; 
+            if (rating === 104) return 7; 
+            if (rating === 105) return 30; 
+            if (rating === 106) return 35; 
+            if (rating === 107) return 40; 
+            if (rating === 108) return 48; 
+            if (rating > 108) return 52;   
             
             return 2;
         }
@@ -105,25 +105,35 @@
             
             reportContent.innerHTML = `
                 <div class="text-center p-5">
-                    <p class="text-blue-400 font-bold mb-2">البوت يستخرج طاقات 23 لاعباً ⚡</p>
-                    <p class="text-gray-500 text-xs">يرجى الانتظار...</p>
+                    <p class="text-blue-400 font-bold mb-2">البوت يستخرج طاقات اللاعبين ⚡</p>
+                    <p class="text-gray-500 text-xs">يرجى الانتظار، جاري فحص 23 لاعباً...</p>
                 </div>
             `;
 
             const base64Data = preview.src.split(',')[1];
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`;
+                // استخدام Flash لسرعته وتجنب استهلاك الحصة المجانية بسرعة
+                const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
+                const modelsData = await modelsRes.json();
                 
-                // تحديث الأوامر: طلب المصفوفة كأرقام فقط لـ 23 لاعباً
+                if (!modelsRes.ok) throw new Error(modelsData.error?.message || "فشل الاتصال بجوجل");
+
+                const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                let targetModel = validModels.find(m => m.name.includes("1.5-flash")); 
+                if (!targetModel) targetModel = validModels.find(m => m.name.includes("flash"));
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
+                
+                // هندسة أوامر صارمة جداً
                 const promptText = `
-                استخرج بيانات التشكيلة بدقة وأرجعها بصيغة JSON فقط:
+                استخرج بيانات التشكيلة من الصورة بدقة تامة. أرجع البيانات بصيغة JSON فقط بهذا الشكل المطابق تماماً:
                 {
-                    "strength": "رقم القوة الجماعية",
-                    "ratings": [أرقام طاقات اللاعبين هنا كمصفوفة],
-                    "note": "ملاحظة سريعة بالعربية"
+                    "strength": 3172,
+                    "ratings": [102, 104, 102, 102, 105, 103, 101, 103, 102, 101, 102, 100, 102, 100, 102, 101, 103, 102, 102, 102, 102, 102],
+                    "note": "ملاحظة بالعربية"
                 }
-                مهم جداً: استخرج أرقام طاقات جميع اللاعبين في الصورة (الأساسيين ودكة البدلاء، عادة 23 لاعباً). المصفوفة يجب أن تحتوي على الأرقام فقط (مثل: [102, 105, 100, 99]). لا تستخرج أسماء اللاعبين.
+                تأكد من وضع أرقام الطاقات فقط داخل مصفوفة ratings لجميع اللاعبين الظاهرين.
                 `;
 
                 const response = await fetch(url, {
@@ -145,31 +155,45 @@
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(result.error?.message || "فشل الاتصال");
+                    throw new Error(result.error?.message || "رفض الخادم معالجة الصورة.");
+                }
+
+                if (!result.candidates || !result.candidates[0].content) {
+                    throw new Error("رد فارغ من الذكاء الاصطناعي.");
                 }
 
                 let aiText = result.candidates[0].content.parts[0].text;
-                let parsedData = JSON.parse(aiText);
+                let parsedData;
                 
-                // حساب السعر النهائي بناءً على كل لاعب!
+                try {
+                    parsedData = JSON.parse(aiText);
+                } catch (e) {
+                    throw new Error("فشل في ترجمة البيانات (JSON Parse Error): " + aiText);
+                }
+                
                 let totalPrice = 0;
                 let ratingsHtml = '';
                 let playerCount = 0;
 
                 if (parsedData.ratings && Array.isArray(parsedData.ratings)) {
                     parsedData.ratings.forEach(rating => {
-                        let pPrice = calculatePlayerPrice(rating);
-                        totalPrice += pPrice;
-                        playerCount++;
-                        
-                        ratingsHtml += `
-                        <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex flex-col justify-center items-center shadow-sm">
-                            <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded w-full text-center">${rating}</span>
-                            <span class="text-[10px] text-gray-400 mt-1">${pPrice} د.م</span>
-                        </div>`;
+                        let rNum = parseInt(rating);
+                        if(!isNaN(rNum)) {
+                            let pPrice = calculatePlayerPrice(rNum);
+                            totalPrice += pPrice;
+                            playerCount++;
+                            
+                            ratingsHtml += `
+                            <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex flex-col justify-center items-center shadow-sm hover:border-blue-500 transition-colors">
+                                <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded w-full text-center">${rNum}</span>
+                                <span class="text-[10px] text-gray-400 mt-1">${pPrice} د.م</span>
+                            </div>`;
+                        }
                     });
-                } else {
-                    ratingsHtml = '<p class="text-gray-500 text-xs text-center w-full col-span-4">لم يقم بقراءة الطاقات.</p>';
+                }
+
+                if (playerCount === 0) {
+                    throw new Error("لم يتم العثور على أرقام طاقات صالحة في الصورة.");
                 }
 
                 let dollarEquivalent = (totalPrice / 10).toFixed(1) + "$";
@@ -183,7 +207,7 @@
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-blue-600/20 rounded-2xl p-4 border border-blue-500/30">
                             <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
-                            <h4 class="text-3xl font-black text-blue-400">${parsedData.strength}</h4>
+                            <h4 class="text-3xl font-black text-blue-400">${parsedData.strength || "???"}</h4>
                         </div>
                         <div class="bg-yellow-500/10 rounded-2xl p-4 border border-yellow-500/30">
                             <p class="text-gray-400 text-[10px] mb-1">سعر الحساب الفعلي</p>
@@ -207,19 +231,25 @@
 
                     <div class="bg-black/20 rounded-2xl p-4 text-right border border-white/5">
                         <p class="text-gray-500 text-[10px] mb-1">توصية المهندس آلي</p>
-                        <p class="text-gray-300 text-xs leading-relaxed">${parsedData.note}</p>
+                        <p class="text-gray-300 text-xs leading-relaxed">${parsedData.note || "لا توجد ملاحظات."}</p>
                     </div>
                 </div>`;
                 
             } catch (error) {
+                // الصندوق الأسود: الآن سيطبع لك السبب الدقيق!
+                let isQuota = error.message.toLowerCase().includes("quota") || error.message.includes("429");
+                let displayError = isQuota ? "الضغط عالٍ جداً على البوت الآن، يرجى الانتظار دقيقة." : error.message;
+
                 reportContent.innerHTML = `
                 <div class="bg-red-900/50 border border-red-500 rounded-xl p-5 text-center">
-                    <p class='text-red-400 font-bold'>عذراً، فشل التحليل!</p>
-                    <p class='text-gray-300 text-xs mt-2'>جرب مرة أخرى.</p>
+                    <p class='text-red-400 font-bold mb-2'>عذراً، فشل التحليل!</p>
+                    <div class='bg-black/40 p-2 rounded text-left overflow-x-auto'>
+                        <p class='text-gray-300 text-[10px] font-mono' dir="ltr">${displayError}</p>
+                    </div>
                 </div>`;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +13 🚀 (تسعير اللاعبين)';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +14 🚀 (نظام التتبع)';
             }
         };
     </script>
