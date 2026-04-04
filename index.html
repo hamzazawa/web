@@ -3,42 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOOMN AI Pro - eFootball Report</title>
+    <title>Check eFootball AI Pro - تقييم الحسابات</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #0b0f1a; color: white; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .loader { border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background-color: #0b0f1a; 
+            background-image: radial-gradient(ellipse at top, #1e3a8a 0%, #0b0f1a 70%);
+            color: white; 
+            min-height: 100vh;
+        }
+        .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .loader { border: 3px solid rgba(255, 255, 255, 0.1); border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
-        .players-scroll::-webkit-scrollbar { width: 4px; }
+        .animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+        .players-scroll::-webkit-scrollbar { width: 5px; }
+        .players-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); rounded-full; }
         .players-scroll::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
+        select option { background-color: #0f172a; color: white; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4">
+<body class="flex flex-col items-center p-4 sm:p-8">
 
-    <header class="w-full max-w-2xl text-center my-10">
-        <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب (خوارزمية الفحص الصارم)</p>
+    <header class="w-full max-w-2xl text-center my-8 animate-fade-in-up">
+        <h1 class="text-5xl sm:text-6xl font-extrabold mb-3 tracking-tight drop-shadow-2xl">
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Check eFootball</span>
+            <span class="text-white">AI Pro</span>
+        </h1>
+        <p class="text-gray-400 text-lg sm:text-xl font-bold">الذكاء الاصطناعي الأقوى لتقييم التشكيلات</p>
     </header>
 
-    <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
-        <div id="drop-area" class="relative group border-2 border-dashed border-gray-600 rounded-2xl p-8 transition-all hover:border-blue-500 cursor-pointer text-center">
-            <input type="file" id="file-input" class="hidden" accept="image/*">
-            <div id="upload-ui">
-                <div class="bg-blue-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
-                </div>
-                <p class="text-gray-300 font-bold">اختر صورة التشكيلة</p>
-                <p class="text-gray-500 text-xs mt-2">يجب أن تظهر التشكيلة الأساسية ودكة البدلاء بوضوح</p>
-            </div>
-            <img id="preview" class="hidden w-full max-h-80 object-contain rounded-xl shadow-md mx-auto">
+    <main class="w-full max-w-2xl glass rounded-[2rem] p-6 sm:p-10">
+        
+        <div class="mb-6 flex flex-col items-center justify-center gap-2">
+            <label for="currency-selector" class="text-xs text-gray-400 font-bold uppercase tracking-wider">اختر عملة التقييم:</label>
+            <select id="currency-selector" class="glass-card text-white text-sm font-bold rounded-xl px-6 py-3 outline-none border border-gray-600 focus:border-blue-500 transition-all cursor-pointer text-center appearance-none w-full sm:w-1/2">
+                <option value="MAD" data-rate="1" data-symbol="د.م">🇲🇦 الدرهم المغربي</option>
+                <option value="DZD" data-rate="13.5" data-symbol="د.ج">🇩🇿 الدينار الجزائري</option>
+                <option value="EGP" data-rate="4.8" data-symbol="ج.م">🇪🇬 الجنيه المصري</option>
+                <option value="TND" data-rate="0.31" data-symbol="د.ت">🇹🇳 الدينار التونسي</option>
+                <option value="USD" data-rate="0.10" data-symbol="$">🇺🇸 الدولار الأمريكي</option>
+            </select>
         </div>
 
-        <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>تحليل التشكيلة الآن 🚀</span>
+        <div id="drop-area" class="relative group border-2 border-dashed border-gray-600/80 rounded-3xl p-8 transition-all hover:border-blue-500 hover:bg-blue-900/10 cursor-pointer text-center flex flex-col items-center justify-center min-h-[200px]">
+            <input type="file" id="file-input" class="hidden" accept="image/*">
+            <div id="upload-ui" class="transition-transform group-hover:scale-105 duration-300">
+                <div class="bg-blue-500/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(59,130,246,0.3)] group-hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] transition-shadow">
+                    <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                </div>
+                <p class="text-gray-200 font-bold text-lg">ارفع صورة التشكيلة هنا</p>
+                <p class="text-blue-400/80 text-xs mt-2 bg-blue-900/30 px-3 py-1 rounded-full inline-block">يجب أن تظهر التشكيلة الأساسية والاحتياط بوضوح</p>
+            </div>
+            <img id="preview" class="hidden w-full max-h-80 object-contain rounded-2xl shadow-2xl mx-auto z-10">
+        </div>
+
+        <button id="analyze-btn" class="w-full mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-lg py-4 rounded-2xl transition-all shadow-[0_10px_20px_rgba(59,130,246,0.3)] hover:shadow-[0_15px_30px_rgba(59,130,246,0.5)] hover:-translate-y-1 hidden flex items-center justify-center gap-3">
+            <span>ابدأ فحص الحساب 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -46,16 +70,19 @@
         </div>
     </main>
 
+    <footer class="mt-10 text-gray-500 text-xs text-center pb-6">
+        <p>جميع الحقوق محفوظة &copy; 2026 Check eFootball AI Pro</p>
+    </footer>
+
     <script>
-        const g1 = "gsk_d4SyISmPwMOZ7cEv556f";
-        const g2 = "WGdyb3FYs7WEmwSvMlCdKWjCWDkoNWNT";
-        const API_KEY = g1 + g2;
+        const API_KEY = "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"; // تم دمج المفتاح لسهولة القراءة
 
         const fileInput = document.getElementById('file-input');
         const preview = document.getElementById('preview');
         const analyzeBtn = document.getElementById('analyze-btn');
         const resultContainer = document.getElementById('result-container');
         const reportContent = document.getElementById('report-content');
+        const currencySelector = document.getElementById('currency-selector');
 
         document.getElementById('drop-area').onclick = () => fileInput.click();
 
@@ -74,11 +101,27 @@
             }
         };
 
-        // 1. خوارزمية التسعير المشروطة للاعبين
-        function calculatePlayerPrice(r, isPremium) {
+        // دالة تحويل العملة
+        function formatCurrency(priceInMad) {
+            const selectedOption = currencySelector.options[currencySelector.selectedIndex];
+            const rate = parseFloat(selectedOption.getAttribute('data-rate'));
+            const symbol = selectedOption.getAttribute('data-symbol');
+            const currencyVal = selectedOption.value;
+
+            let converted = priceInMad * rate;
+            
+            // تنسيق الأرقام (أرقام عشرية للدولار وتونس، وأرقام صحيحة للباقي)
+            if(currencyVal === 'USD' || currencyVal === 'TND') {
+                return converted.toFixed(2) + ' ' + symbol;
+            } else {
+                return Math.round(converted) + ' ' + symbol;
+            }
+        }
+
+        // خوارزمية التسعير الأساسية (بالدرهم)
+        function calculatePlayerPriceMAD(r, isPremium) {
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
-            
             if (rating < 100) return 1;
             if (rating === 100) return 2;
             if (rating === 101) return 3;
@@ -102,8 +145,7 @@
             return 1;
         }
 
-        // 2. خوارزمية علاوة القوة الإجمالية
-        function getStrengthBonus(s) {
+        function getStrengthBonusMAD(s) {
             if (s < 3100) return 5;
             if (s >= 3100 && s < 3140) return 10;
             if (s >= 3140 && s < 3160) return 15;
@@ -131,9 +173,14 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري مسح اللاعبين...';
+            analyzeBtn.innerHTML = '<div class="loader"></div> <span class="mr-2">جاري فحص الحساب بالذكاء الاصطناعي...</span>';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>نبحث عن 23 لاعباً في التشكيلة... لحظات.</p>";
+            reportContent.innerHTML = `
+                <div class="flex flex-col items-center justify-center py-10">
+                    <div class="loader mb-4 border-blue-400 border-t-blue-600 w-10 h-10 border-4"></div>
+                    <p class="text-blue-400 font-bold">جاري استخراج طاقات 23 لاعباً...</p>
+                </div>
+            `;
 
             const base64Image = preview.src;
 
@@ -166,7 +213,7 @@
                 let data = JSON.parse(jsonString);
                 
                 let strength = parseInt(data.strength) || 0;
-                let playersTotal = 0;
+                let playersTotalMAD = 0;
                 let ratingsHtml = '';
                 
                 let highTierCount = 0;
@@ -184,24 +231,25 @@
                     });
                 }
 
-                // 🛑 الفحص الصارم للعدد (23 لاعب)
                 if (validPlayersArray.length < 23) {
                     throw new Error(`⚠️ لم نتمكن من قراءة 23 لاعباً (تم العثور على ${validPlayersArray.length} فقط). يرجى التأكد من رفع صورة واضحة تظهر التشكيلة الأساسية ودكة البدلاء بالكامل.`);
                 }
 
-                // تطبيق شرط الحساب القسط
                 let isPremium = (strength > 3219 || highTierCount > 4);
 
                 validPlayersArray.forEach(rNum => {
-                    let p = calculatePlayerPrice(rNum, isPremium);
-                    playersTotal += p;
-                    ratingsHtml += `<div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-center">
-                        <span class="text-xs font-black text-green-400">${rNum}</span><br>
-                        <span class="text-[9px] text-gray-400">${p}د.م</span>
+                    let pMad = calculatePlayerPriceMAD(rNum, isPremium);
+                    playersTotalMAD += pMad;
+                    
+                    // السعر المنسق للواجهة بناءً على العملة
+                    let displayPrice = formatCurrency(pMad);
+
+                    ratingsHtml += `<div class="glass-card rounded-xl p-2 flex flex-col items-center justify-center hover:bg-blue-900/30 transition-colors border border-gray-700 hover:border-blue-500">
+                        <span class="text-sm font-black text-green-400 drop-shadow-md">${rNum}</span>
+                        <span class="text-[9px] text-gray-300 font-bold mt-1">${displayPrice}</span>
                     </div>`;
                 });
 
-                // حساب التقييم النصي
                 let avg = (sumRatings / validPlayersArray.length).toFixed(1);
                 let avgText = "";
                 let avgColor = "";
@@ -210,56 +258,60 @@
                 else if (avg >= 102 && avg < 103) { avgText = "متوسط"; avgColor = "text-yellow-400"; }
                 else if (avg >= 103 && avg < 104) { avgText = "قوي"; avgColor = "text-blue-400"; }
                 else if (avg >= 104 && avg < 106) { avgText = "قوي جداً"; avgColor = "text-purple-400"; }
-                else if (avg >= 106) { avgText = "ضخم للغاية"; avgColor = "text-green-400"; }
+                else if (avg >= 106) { avgText = "ضخم للغاية"; avgColor = "text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.8)]"; }
 
-                let bonus = getStrengthBonus(strength);
+                let bonusMAD = getStrengthBonusMAD(strength);
+                let jitterMAD = Math.floor(Math.random() * 3) - 1; 
                 
-                // التذبذب العشوائي بين -1 و +1
-                let jitter = Math.floor(Math.random() * 3) - 1; 
-                let finalPrice = playersTotal + bonus + jitter;
-                if(finalPrice < 0) finalPrice = 0; 
+                let finalPriceMAD = playersTotalMAD + bonusMAD + jitterMAD;
+                if(finalPriceMAD < 0) finalPriceMAD = 0; 
+
+                // تحويل المبالغ النهائية للعملة المختارة
+                let finalDisplayPrice = formatCurrency(finalPriceMAD);
+                let bonusDisplayPrice = formatCurrency(bonusMAD);
 
                 reportContent.innerHTML = `
-                <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up text-center max-w-md mx-auto">
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
-                            <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
-                            <h4 class="text-3xl font-black text-blue-400">${strength}</h4>
+                <div class="glass rounded-[2rem] p-6 sm:p-8 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl">
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-gradient-to-br from-blue-900/40 to-blue-800/10 p-5 rounded-2xl border border-blue-500/30 text-center relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/20 rounded-full blur-xl"></div>
+                            <p class="text-gray-400 text-[11px] mb-1 font-bold">القوة الجماعية</p>
+                            <h4 class="text-4xl font-black text-blue-400 tracking-tighter drop-shadow-md">${strength}</h4>
                         </div>
-                        <div class="bg-yellow-500/10 p-4 rounded-2xl border border-yellow-500/20">
-                            <p class="text-gray-400 text-[10px] mb-1">السعر النهائي</p>
-                            <h4 class="text-3xl font-black text-yellow-500">${finalPrice} <span class="text-sm">د.م</span></h4>
-                            ${bonus > 0 ? `<p class="text-green-400 text-[9px] font-bold">+${bonus} علاوة</p>` : ''}
-                        </div>
-                    </div>
-
-                    <div class="bg-gray-800/40 p-4 rounded-2xl border border-gray-700/50 mb-6 flex justify-between items-center">
-                        <div class="text-right">
-                            <p class="text-gray-400 text-[10px] mb-1">مجموع الطاقات:</p>
-                            <h5 class="text-lg font-bold text-gray-200">${sumRatings} <span class="text-[10px] text-gray-500">نقطة</span></h5>
-                        </div>
-                        <div class="text-left border-r border-gray-600 pr-4">
-                            <p class="text-gray-400 text-[10px] mb-1">تقييم اللاعبين:</p>
-                            <h5 class="text-xl font-black text-white">${avg} <span class="text-xs ${avgColor}">${avgText}</span></h5>
+                        <div class="bg-gradient-to-br from-yellow-900/40 to-orange-800/10 p-5 rounded-2xl border border-yellow-500/30 text-center relative overflow-hidden">
+                            <div class="absolute -left-4 -top-4 w-16 h-16 bg-yellow-500/20 rounded-full blur-xl"></div>
+                            <p class="text-gray-400 text-[11px] mb-1 font-bold">السعر التقديري</p>
+                            <h4 class="text-3xl font-black text-yellow-400 tracking-tighter drop-shadow-md" dir="ltr">${finalDisplayPrice}</h4>
+                            ${bonusMAD > 0 ? `<p class="text-green-400 text-[10px] font-bold mt-1 bg-green-400/10 inline-block px-2 rounded-md">+${bonusDisplayPrice} علاوة</p>` : ''}
                         </div>
                     </div>
 
-                    <div class="text-right mb-4">
-                         <p class="text-gray-400 text-[10px] mb-2 font-bold uppercase">الطاقات المستخرجة (${validPlayersArray.length}):</p>
-                         <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
+                    <div class="glass-card p-5 rounded-2xl border border-gray-600 mb-6 flex justify-between items-center relative overflow-hidden">
+                        <div class="text-right z-10">
+                            <p class="text-gray-400 text-[10px] mb-1 font-bold">مجموع الطاقات:</p>
+                            <h5 class="text-xl font-bold text-gray-100">${sumRatings} <span class="text-[10px] text-gray-500">نقطة</span></h5>
+                        </div>
+                        <div class="text-left border-r border-gray-600 pr-5 z-10">
+                            <p class="text-gray-400 text-[10px] mb-1 font-bold">تقييم الفريق:</p>
+                            <h5 class="text-2xl font-black text-white">${avg} <span class="text-sm block sm:inline mt-1 sm:mt-0 ${avgColor}">${avgText}</span></h5>
+                        </div>
                     </div>
-                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تم تحليل التشكيلة بنجاح."}"</div>
+
+                    <div class="text-right mb-2">
+                         <p class="text-gray-400 text-[11px] mb-3 font-bold uppercase border-b border-gray-700 pb-2">التفاصيل الفردية للاعبين (${validPlayersArray.length}):</p>
+                         <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
+                    </div>
                 </div>`;
             } catch (e) {
-                // طباعة الخطأ بشكل أنيق إذا لم تتوفر الشروط
                 reportContent.innerHTML = `
-                <div class="bg-red-900/40 border border-red-500 p-5 rounded-xl text-center">
-                    <p class='text-red-400 font-bold mb-2 text-sm'>${e.message.includes('⚠️') ? e.message : '❌ عذراً، فشل التحليل بسبب خطأ في الخادم.'}</p>
+                <div class="bg-red-900/30 border border-red-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
+                    <div class="text-red-400 mb-3"><svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                    <p class='text-red-300 font-bold text-sm leading-relaxed'>${e.message.includes('⚠️') ? e.message : 'عذراً، حدث خطأ في معالجة الصورة. يرجى المحاولة مرة أخرى لاحقاً.'}</p>
                 </div>`;
                 if (!e.message.includes('⚠️')) console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'تحليل التشكيلة الآن 🚀';
+                analyzeBtn.innerHTML = '<span>فحص تشكيلة أخرى 🚀</span>';
             }
         };
     </script>
