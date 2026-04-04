@@ -38,7 +38,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +11 🚀 (مانع التجمد)</span>
+            <span>ابدأ التحليل +12 🚀 (توفير الحصة)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -100,14 +100,13 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري مسح اللاعبين...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المعالجة...';
             resultContainer.classList.remove('hidden');
             
-            // إضافة تنبيه للمستخدم بأن الأمر يأخذ وقتاً
             reportContent.innerHTML = `
                 <div class="text-center p-5">
-                    <p class="text-blue-400 font-bold mb-2">البوت يقرأ وجوه وطاقات اللاعبين...</p>
-                    <p class="text-gray-500 text-xs">قراءة 18 لاعباً تستغرق حوالي 10 إلى 20 ثانية، يرجى الانتظار ولا تغلق الصفحة.</p>
+                    <p class="text-blue-400 font-bold mb-2">البوت يحلل التشكيلة حالياً ⚡</p>
+                    <p class="text-gray-500 text-xs">يرجى الانتظار بضع ثوانٍ...</p>
                 </div>
             `;
 
@@ -117,20 +116,21 @@
                 const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
                 const modelsData = await modelsRes.json();
                 
-                if (!modelsRes.ok) throw new Error("مفتاح API غير صالح أو محظور.");
+                if (!modelsRes.ok) throw new Error(modelsData.error?.message || "خطأ في الاتصال");
 
                 const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-                let targetModel = validModels.find(m => m.name.includes("pro")); 
+                
+                // التعديل هنا: إجبار البوت على استخدام Flash بدلاً من Pro للحفاظ على الحصة المجانية
+                let targetModel = validModels.find(m => m.name.includes("1.5-flash")); 
                 if (!targetModel) targetModel = validModels.find(m => m.name.includes("flash"));
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
                 
-                // هندسة الأوامر المبسطة والواضحة
                 const promptText = `
-                استخرج بيانات eFootball من الصورة.
-                المطلوب: القوة الجماعية (Collective Strength)، وقائمة بأهم اللاعبين وقوتهم.
-                الهيكلة المطلوبة:
-                {"strength": "رقم", "players": [{"name": "اسم اللاعب", "rating": "رقم"}], "note": "ملاحظة"}
+                استخرج بيانات eFootball من الصورة المرفقة.
+                المطلوب: القوة الجماعية (Collective Strength)، وأهم اللاعبين الظاهرين (بحد أقصى 11 لاعب لتسريع الرد).
+                يجب أن يكون الرد بصيغة JSON فقط كالتالي:
+                {"strength": "رقم", "players": [{"name": "اسم", "rating": "رقم"}], "note": "ملاحظة بالعربية"}
                 `;
 
                 const response = await fetch(url, {
@@ -143,7 +143,6 @@
                                 { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                             ]
                         }],
-                        // الميزة السحرية الجديدة: إجبار جوجل على إرجاع JSON نظيف
                         generationConfig: {
                             response_mime_type: "application/json"
                         }
@@ -152,75 +151,75 @@
 
                 const result = await response.json();
 
-                // حماية من الأخطاء (مانع التجمد)
                 if (!response.ok) {
-                    throw new Error(result.error?.message || "رفض الخادم إتمام الطلب.");
+                    throw new Error(result.error?.message || "فشل الاتصال");
                 }
 
-                if (result.candidates && result.candidates[0].content) {
-                    let aiText = result.candidates[0].content.parts[0].text;
-                    let parsedData = JSON.parse(aiText);
-                    let valuation = calculateDynamicPrice(parsedData.strength);
+                let aiText = result.candidates[0].content.parts[0].text;
+                let parsedData = JSON.parse(aiText);
+                let valuation = calculateDynamicPrice(parsedData.strength);
 
-                    let playersHtml = '';
-                    if (parsedData.players && parsedData.players.length > 0) {
-                        parsedData.players.forEach(player => {
-                            playersHtml += `
-                            <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex justify-between items-center shadow-sm">
-                                <span class="text-xs text-gray-200 font-bold truncate ml-2">${player.name}</span>
-                                <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded">${player.rating}</span>
-                            </div>`;
-                        });
-                    } else {
-                        playersHtml = '<p class="text-gray-500 text-xs text-center w-full col-span-2">لم يتم قراءة اللاعبين بوضوح.</p>';
-                    }
-
-                    reportContent.innerHTML = `
-                    <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl max-w-md mx-auto text-center">
-                        <div class="mb-4">
-                            <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">DOOMN Verified</span>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div class="bg-blue-600/20 rounded-2xl p-4 border border-blue-500/30">
-                                <p class="text-gray-400 text-[10px] mb-1">القوة Collective</p>
-                                <h4 class="text-3xl font-black text-blue-400">${parsedData.strength}</h4>
-                            </div>
-                            <div class="bg-yellow-500/10 rounded-2xl p-4 border border-yellow-500/30">
-                                <p class="text-gray-400 text-[10px] mb-1">السعر التقديري</p>
-                                <h4 class="text-3xl font-black text-yellow-500">${valuation.price} <span class="text-sm">د.م</span></h4>
-                            </div>
-                        </div>
-
-                        <div class="mb-6 text-right">
-                            <h5 class="text-gray-300 text-sm font-bold mb-3 border-b border-gray-700 pb-2 flex items-center gap-2">
-                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                                نجوم التشكيلة المستخرجين:
-                            </h5>
-                            <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto players-scroll p-1">
-                                ${playersHtml}
-                            </div>
-                        </div>
-
-                        <div class="bg-black/20 rounded-2xl p-4 text-right border border-white/5">
-                            <p class="text-gray-500 text-[10px] mb-1">توصية المهندس آلي</p>
-                            <p class="text-gray-300 text-xs leading-relaxed">${parsedData.note}</p>
-                        </div>
-                    </div>`;
+                let playersHtml = '';
+                if (parsedData.players && parsedData.players.length > 0) {
+                    parsedData.players.forEach(player => {
+                        playersHtml += `
+                        <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex justify-between items-center shadow-sm">
+                            <span class="text-xs text-gray-200 font-bold truncate ml-2">${player.name}</span>
+                            <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded">${player.rating}</span>
+                        </div>`;
+                    });
                 } else {
-                    throw new Error("لم يتم استخراج البيانات المطلوبة.");
+                    playersHtml = '<p class="text-gray-500 text-xs text-center w-full col-span-2">لم يقم بقراءة اللاعبين بوضوح.</p>';
                 }
+
+                reportContent.innerHTML = `
+                <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl max-w-md mx-auto text-center">
+                    <div class="mb-4">
+                        <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">DOOMN Verified</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-blue-600/20 rounded-2xl p-4 border border-blue-500/30">
+                            <p class="text-gray-400 text-[10px] mb-1">القوة Collective</p>
+                            <h4 class="text-3xl font-black text-blue-400">${parsedData.strength}</h4>
+                        </div>
+                        <div class="bg-yellow-500/10 rounded-2xl p-4 border border-yellow-500/30">
+                            <p class="text-gray-400 text-[10px] mb-1">السعر التقديري</p>
+                            <h4 class="text-3xl font-black text-yellow-500">${valuation.price} <span class="text-sm">د.م</span></h4>
+                        </div>
+                    </div>
+
+                    <div class="mb-6 text-right">
+                        <h5 class="text-gray-300 text-sm font-bold mb-3 border-b border-gray-700 pb-2 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            نجوم التشكيلة المستخرجين:
+                        </h5>
+                        <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto players-scroll p-1">
+                            ${playersHtml}
+                        </div>
+                    </div>
+
+                    <div class="bg-black/20 rounded-2xl p-4 text-right border border-white/5">
+                        <p class="text-gray-500 text-[10px] mb-1">توصية المهندس آلي</p>
+                        <p class="text-gray-300 text-xs leading-relaxed">${parsedData.note}</p>
+                    </div>
+                </div>`;
+                
             } catch (error) {
-                // الآن إذا حدث أي خطأ، سيطبع هنا ولن يعلق!
+                // ترجمة رسائل الخطأ للمستخدم
+                let errorMessage = error.message;
+                if (errorMessage.includes("Quota") || errorMessage.includes("exceeded") || errorMessage.includes("429")) {
+                    errorMessage = "الضغط عالٍ جداً على البوت حالياً من قبل المستخدمين. يرجى الانتظار لمدة دقيقة واحدة ثم المحاولة مجدداً.";
+                }
+
                 reportContent.innerHTML = `
                 <div class="bg-red-900/50 border border-red-500 rounded-xl p-5 text-center">
-                    <p class='text-red-400 font-bold'>عذراً، فشل التحليل!</p>
-                    <p class='text-gray-300 text-xs mt-2'>السبب التقني: ${error.message}</p>
-                    <p class='text-gray-400 text-xs mt-2'>جرب صورة أوضح أو انتظر دقيقة وأعد المحاولة.</p>
+                    <p class='text-red-400 font-bold'>عذراً، لم نتمكن من التحليل</p>
+                    <p class='text-gray-300 text-sm mt-2'>${errorMessage}</p>
                 </div>`;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +11 🚀 (إعادة المحاولة)';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +12 🚀 (إعادة المحاولة)';
             }
         };
     </script>
