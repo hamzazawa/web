@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب (خوارزمية الفحص الصارم)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب (محرك 90B عالي الدقة)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -32,13 +32,13 @@
                     <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
                 </div>
                 <p class="text-gray-300 font-bold">اختر صورة التشكيلة</p>
-                <p class="text-gray-500 text-xs mt-2">يجب أن تظهر التشكيلة الأساسية ودكة البدلاء بوضوح</p>
+                <p class="text-gray-500 text-xs mt-2">لضمان دقة القراءة، استخدم "سكرين شوت" واضحة</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-xl shadow-md mx-auto">
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>تحليل التشكيلة الآن 🚀</span>
+            <span>فحص التشكيلة (دقة عالية) 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -74,7 +74,6 @@
             }
         };
 
-        // 1. خوارزمية التسعير المشروطة للاعبين
         function calculatePlayerPrice(r, isPremium) {
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
@@ -102,7 +101,6 @@
             return 1;
         }
 
-        // 2. خوارزمية علاوة القوة الإجمالية
         function getStrengthBonus(s) {
             if (s < 3100) return 5;
             if (s >= 3100 && s < 3140) return 10;
@@ -131,9 +129,9 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري مسح اللاعبين...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المسح الدقيق 90B...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>نبحث عن 23 لاعباً في التشكيلة... لحظات.</p>";
+            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يقرأ الأرقام بدقة عالية الآن... قد يأخذ وقتاً أطول قليلاً.</p>";
 
             const base64Image = preview.src;
 
@@ -145,12 +143,13 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                        // 🔥 الانتقال للموديل الأضخم والأكثر دقة في القراءة 🔥
+                        model: "llama-3.2-90b-vision-preview",
                         messages: [
                             {
                                 role: "user",
                                 content: [
-                                    { type: "text", text: "Identify eFootball collective strength and EXACTLY 23 player ratings (11 starters + 12 subs). You MUST return 23 numbers. Return JSON only exactly like this: {\"strength\": 3210, \"ratings\": [102, 105...], \"note\": \"Arabic review\"}" },
+                                    { type: "text", text: "Act as a highly precise OCR scanner. Read the eFootball 'Collective Strength' number. Then, carefully extract EXACTLY 23 player overall ratings (usually numbers between 90 and 108 located on the player cards). DO NOT guess or hallucinate. Return valid JSON only: {\"strength\": 3210, \"ratings\": [102, 105, 100...], \"note\": \"Arabic review\"}" },
                                     { type: "image_url", image_url: { url: base64Image } }
                                 ]
                             }
@@ -176,7 +175,7 @@
                 if (data.ratings && Array.isArray(data.ratings)) {
                     data.ratings.forEach(r => {
                         let rNum = parseInt(r);
-                        if (!isNaN(rNum)) {
+                        if (!isNaN(rNum) && rNum > 50 && rNum < 120) { // تنظيف إضافي لمنع أرقام غريبة
                             validPlayersArray.push(rNum);
                             if (rNum > 104) highTierCount++;
                             sumRatings += rNum;
@@ -184,9 +183,8 @@
                     });
                 }
 
-                // 🛑 الفحص الصارم للعدد (23 لاعب)
                 if (validPlayersArray.length < 23) {
-                    throw new Error(`⚠️ لم نتمكن من قراءة 23 لاعباً (تم العثور على ${validPlayersArray.length} فقط). يرجى التأكد من رفع صورة واضحة تظهر التشكيلة الأساسية ودكة البدلاء بالكامل.`);
+                    throw new Error(`⚠️ تم مسح ${validPlayersArray.length} لاعب فقط بدلاً من 23. يرجى رفع صورة واضحة جداً (سكرين شوت أصلية غير مضغوطة) لضمان دقة الحساب.`);
                 }
 
                 // تطبيق شرط الحساب القسط
@@ -201,7 +199,6 @@
                     </div>`;
                 });
 
-                // حساب التقييم النصي
                 let avg = (sumRatings / validPlayersArray.length).toFixed(1);
                 let avgText = "";
                 let avgColor = "";
@@ -214,7 +211,6 @@
 
                 let bonus = getStrengthBonus(strength);
                 
-                // التذبذب العشوائي بين -1 و +1
                 let jitter = Math.floor(Math.random() * 3) - 1; 
                 let finalPrice = playersTotal + bonus + jitter;
                 if(finalPrice < 0) finalPrice = 0; 
@@ -251,7 +247,6 @@
                     <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تم تحليل التشكيلة بنجاح."}"</div>
                 </div>`;
             } catch (e) {
-                // طباعة الخطأ بشكل أنيق إذا لم تتوفر الشروط
                 reportContent.innerHTML = `
                 <div class="bg-red-900/40 border border-red-500 p-5 rounded-xl text-center">
                     <p class='text-red-400 font-bold mb-2 text-sm'>${e.message.includes('⚠️') ? e.message : '❌ عذراً، فشل التحليل بسبب خطأ في الخادم.'}</p>
@@ -259,7 +254,7 @@
                 if (!e.message.includes('⚠️')) console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'تحليل التشكيلة الآن 🚀';
+                analyzeBtn.innerHTML = 'فحص التشكيلة (دقة عالية) 🚀';
             }
         };
     </script>
