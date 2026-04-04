@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب الذكي (Groq Engine)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب (خوارزمية الفحص الصارم)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -32,6 +32,7 @@
                     <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
                 </div>
                 <p class="text-gray-300 font-bold">اختر صورة التشكيلة</p>
+                <p class="text-gray-500 text-xs mt-2">يجب أن تظهر التشكيلة الأساسية ودكة البدلاء بوضوح</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-xl shadow-md mx-auto">
         </div>
@@ -46,7 +47,6 @@
     </main>
 
     <script>
-        // مفتاح Groq الخاص بك
         const g1 = "gsk_d4SyISmPwMOZ7cEv556f";
         const g2 = "WGdyb3FYs7WEmwSvMlCdKWjCWDkoNWNT";
         const API_KEY = g1 + g2;
@@ -79,7 +79,6 @@
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
             
-            // القاعدة الثابتة
             if (rating < 100) return 1;
             if (rating === 100) return 2;
             if (rating === 101) return 3;
@@ -87,7 +86,6 @@
             if (rating === 103) return 5;
             if (rating === 104) return 9;
             
-            // التسعير المتغير (إذا كان الحساب قسط/قوي)
             if (isPremium) {
                 if (rating === 105) return 30;
                 if (rating === 106) return 35;
@@ -104,7 +102,7 @@
             return 1;
         }
 
-        // 2. خوارزمية علاوة القوة الإجمالية الشاملة
+        // 2. خوارزمية علاوة القوة الإجمالية
         function getStrengthBonus(s) {
             if (s < 3100) return 5;
             if (s >= 3100 && s < 3140) return 10;
@@ -133,9 +131,9 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المعالجة...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري مسح اللاعبين...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>خوارزمية Groq تحلل التشكيلة الآن...</p>";
+            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>نبحث عن 23 لاعباً في التشكيلة... لحظات.</p>";
 
             const base64Image = preview.src;
 
@@ -152,7 +150,7 @@
                             {
                                 role: "user",
                                 content: [
-                                    { type: "text", text: "Identify eFootball collective strength and all visible player ratings. Return JSON only exactly like this: {\"strength\": 3210, \"ratings\": [102, 105], \"note\": \"Arabic review\"}" },
+                                    { type: "text", text: "Identify eFootball collective strength and EXACTLY 23 player ratings (11 starters + 12 subs). You MUST return 23 numbers. Return JSON only exactly like this: {\"strength\": 3210, \"ratings\": [102, 105...], \"note\": \"Arabic review\"}" },
                                     { type: "image_url", image_url: { url: base64Image } }
                                 ]
                             }
@@ -171,41 +169,40 @@
                 let playersTotal = 0;
                 let ratingsHtml = '';
                 
-                // حساب عدد اللاعبين الذين طاقتهم أكبر من 104
                 let highTierCount = 0;
                 let sumRatings = 0;
-                let validPlayersCount = 0;
+                let validPlayersArray = [];
 
                 if (data.ratings && Array.isArray(data.ratings)) {
                     data.ratings.forEach(r => {
                         let rNum = parseInt(r);
                         if (!isNaN(rNum)) {
-                            if (rNum > 104) highTierCount++; // 105 وما فوق
+                            validPlayersArray.push(rNum);
+                            if (rNum > 104) highTierCount++;
                             sumRatings += rNum;
-                            validPlayersCount++;
                         }
                     });
                 }
 
-                // تطبيق شرط الحساب القسط (Premium)
+                // 🛑 الفحص الصارم للعدد (23 لاعب)
+                if (validPlayersArray.length < 23) {
+                    throw new Error(`⚠️ لم نتمكن من قراءة 23 لاعباً (تم العثور على ${validPlayersArray.length} فقط). يرجى التأكد من رفع صورة واضحة تظهر التشكيلة الأساسية ودكة البدلاء بالكامل.`);
+                }
+
+                // تطبيق شرط الحساب القسط
                 let isPremium = (strength > 3219 || highTierCount > 4);
 
-                if (data.ratings && Array.isArray(data.ratings)) {
-                    data.ratings.forEach(r => {
-                        let rNum = parseInt(r);
-                        if (!isNaN(rNum)) {
-                            let p = calculatePlayerPrice(rNum, isPremium);
-                            playersTotal += p;
-                            ratingsHtml += `<div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-center">
-                                <span class="text-xs font-black text-green-400">${rNum}</span><br>
-                                <span class="text-[9px] text-gray-400">${p}د.م</span>
-                            </div>`;
-                        }
-                    });
-                }
+                validPlayersArray.forEach(rNum => {
+                    let p = calculatePlayerPrice(rNum, isPremium);
+                    playersTotal += p;
+                    ratingsHtml += `<div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-center">
+                        <span class="text-xs font-black text-green-400">${rNum}</span><br>
+                        <span class="text-[9px] text-gray-400">${p}د.م</span>
+                    </div>`;
+                });
 
-                // حساب متوسط الطاقات
-                let avg = validPlayersCount > 0 ? (sumRatings / validPlayersCount).toFixed(1) : 0;
+                // حساب التقييم النصي
+                let avg = (sumRatings / validPlayersArray.length).toFixed(1);
                 let avgText = "";
                 let avgColor = "";
 
@@ -217,16 +214,16 @@
 
                 let bonus = getStrengthBonus(strength);
                 
-                // التذبذب العشوائي (Jitter) بين -1 و +1 درهم
+                // التذبذب العشوائي بين -1 و +1
                 let jitter = Math.floor(Math.random() * 3) - 1; 
                 let finalPrice = playersTotal + bonus + jitter;
-                if(finalPrice < 0) finalPrice = 0; // لضمان عدم وجود سعر سالب
+                if(finalPrice < 0) finalPrice = 0; 
 
                 reportContent.innerHTML = `
                 <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up text-center max-w-md mx-auto">
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
-                            <p class="text-gray-400 text-[10px] mb-1">القوة</p>
+                            <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
                             <h4 class="text-3xl font-black text-blue-400">${strength}</h4>
                         </div>
                         <div class="bg-yellow-500/10 p-4 rounded-2xl border border-yellow-500/20">
@@ -242,19 +239,24 @@
                             <h5 class="text-lg font-bold text-gray-200">${sumRatings} <span class="text-[10px] text-gray-500">نقطة</span></h5>
                         </div>
                         <div class="text-left border-r border-gray-600 pr-4">
-                            <p class="text-gray-400 text-[10px] mb-1">متوسط اللاعب:</p>
+                            <p class="text-gray-400 text-[10px] mb-1">تقييم اللاعبين:</p>
                             <h5 class="text-xl font-black text-white">${avg} <span class="text-xs ${avgColor}">${avgText}</span></h5>
                         </div>
                     </div>
 
                     <div class="text-right mb-4">
-                         <p class="text-gray-400 text-[10px] mb-2 font-bold uppercase">تفاصيل الطاقات (${validPlayersCount} لاعب):</p>
+                         <p class="text-gray-400 text-[10px] mb-2 font-bold uppercase">الطاقات المستخرجة (${validPlayersArray.length}):</p>
                          <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
                     </div>
-                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تشكيلة رائعة."}"</div>
+                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تم تحليل التشكيلة بنجاح."}"</div>
                 </div>`;
             } catch (e) {
-                reportContent.innerHTML = `<div class="bg-red-900/40 border border-red-500 p-5 rounded-xl text-red-400 text-xs text-center">${e.message}</div>`;
+                // طباعة الخطأ بشكل أنيق إذا لم تتوفر الشروط
+                reportContent.innerHTML = `
+                <div class="bg-red-900/40 border border-red-500 p-5 rounded-xl text-center">
+                    <p class='text-red-400 font-bold mb-2 text-sm'>${e.message.includes('⚠️') ? e.message : '❌ عذراً، فشل التحليل بسبب خطأ في الخادم.'}</p>
+                </div>`;
+                if (!e.message.includes('⚠️')) console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
                 analyzeBtn.innerHTML = 'تحليل التشكيلة الآن 🚀';
