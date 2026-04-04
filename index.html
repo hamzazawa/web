@@ -22,7 +22,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تحليل تشكيلات eFootball واستخراج اللاعبين</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -38,7 +38,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +12 🚀 (توفير الحصة)</span>
+            <span>ابدأ التحليل +13 🚀 (تسعير اللاعبين)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -75,24 +75,24 @@
             }
         };
 
-        function calculateDynamicPrice(strengthString) {
-            let s = parseInt(String(strengthString).replace(/\D/g, ''));
-            if (isNaN(s)) return { price: "???", dollar: "غير محدد" };
-
-            let base = 0; let dollarEquivalent = "";
-            if (s < 3100) { base = 20; dollarEquivalent = "(2$)"; }
-            else if (s < 3150) { base = 60; dollarEquivalent = "(6$)"; }
-            else if (s < 3170) { base = 85; dollarEquivalent = "(8.5$)"; }
-            else if (s < 3190) { base = 120; dollarEquivalent = "(12$)"; }
-            else if (s < 3200) { base = 160; dollarEquivalent = "(16$)"; }
-            else if (s < 3210) { base = 200; dollarEquivalent = "(20$)"; }
-            else if (s < 3230) { base = 250; dollarEquivalent = "(25$)"; }
-            else if (s < 3240) { base = 360; dollarEquivalent = "(36$)"; }
-            else if (s < 3250) { base = 520; dollarEquivalent = "(52$)"; }
-            else { base = 650; dollarEquivalent = "(65$)"; }
-
-            let jitter = Math.floor(Math.random() * 17) - 4; 
-            return { price: base + jitter, dollar: dollarEquivalent };
+        // خوارزمية تسعير اللاعب الواحد التي صممتها أنت!
+        function calculatePlayerPrice(r) {
+            let rating = parseInt(r);
+            if (isNaN(rating)) return 0;
+            
+            if (rating < 100) return 2;
+            if (rating === 100) return 3; // تحت 101
+            if (rating === 101) return 4;
+            if (rating === 102) return 4; // 102
+            if (rating === 103) return 5; // 103
+            if (rating === 104) return 7; // تحت 105 (تأويل)
+            if (rating === 105) return 30; // تحت 106
+            if (rating === 106) return 35; // تحت 107
+            if (rating === 107) return 40; // تحت 108
+            if (rating === 108) return 48; // 108
+            if (rating > 108) return 52;   // فوق 108 أو 107
+            
+            return 2;
         }
 
         analyzeBtn.onclick = async () => {
@@ -105,32 +105,25 @@
             
             reportContent.innerHTML = `
                 <div class="text-center p-5">
-                    <p class="text-blue-400 font-bold mb-2">البوت يحلل التشكيلة حالياً ⚡</p>
-                    <p class="text-gray-500 text-xs">يرجى الانتظار بضع ثوانٍ...</p>
+                    <p class="text-blue-400 font-bold mb-2">البوت يستخرج طاقات 23 لاعباً ⚡</p>
+                    <p class="text-gray-500 text-xs">يرجى الانتظار...</p>
                 </div>
             `;
 
             const base64Data = preview.src.split(',')[1];
 
             try {
-                const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
-                const modelsData = await modelsRes.json();
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`;
                 
-                if (!modelsRes.ok) throw new Error(modelsData.error?.message || "خطأ في الاتصال");
-
-                const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-                
-                // التعديل هنا: إجبار البوت على استخدام Flash بدلاً من Pro للحفاظ على الحصة المجانية
-                let targetModel = validModels.find(m => m.name.includes("1.5-flash")); 
-                if (!targetModel) targetModel = validModels.find(m => m.name.includes("flash"));
-
-                const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
-                
+                // تحديث الأوامر: طلب المصفوفة كأرقام فقط لـ 23 لاعباً
                 const promptText = `
-                استخرج بيانات eFootball من الصورة المرفقة.
-                المطلوب: القوة الجماعية (Collective Strength)، وأهم اللاعبين الظاهرين (بحد أقصى 11 لاعب لتسريع الرد).
-                يجب أن يكون الرد بصيغة JSON فقط كالتالي:
-                {"strength": "رقم", "players": [{"name": "اسم", "rating": "رقم"}], "note": "ملاحظة بالعربية"}
+                استخرج بيانات التشكيلة بدقة وأرجعها بصيغة JSON فقط:
+                {
+                    "strength": "رقم القوة الجماعية",
+                    "ratings": [أرقام طاقات اللاعبين هنا كمصفوفة],
+                    "note": "ملاحظة سريعة بالعربية"
+                }
+                مهم جداً: استخرج أرقام طاقات جميع اللاعبين في الصورة (الأساسيين ودكة البدلاء، عادة 23 لاعباً). المصفوفة يجب أن تحتوي على الأرقام فقط (مثل: [102, 105, 100, 99]). لا تستخرج أسماء اللاعبين.
                 `;
 
                 const response = await fetch(url, {
@@ -157,20 +150,29 @@
 
                 let aiText = result.candidates[0].content.parts[0].text;
                 let parsedData = JSON.parse(aiText);
-                let valuation = calculateDynamicPrice(parsedData.strength);
+                
+                // حساب السعر النهائي بناءً على كل لاعب!
+                let totalPrice = 0;
+                let ratingsHtml = '';
+                let playerCount = 0;
 
-                let playersHtml = '';
-                if (parsedData.players && parsedData.players.length > 0) {
-                    parsedData.players.forEach(player => {
-                        playersHtml += `
-                        <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex justify-between items-center shadow-sm">
-                            <span class="text-xs text-gray-200 font-bold truncate ml-2">${player.name}</span>
-                            <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded">${player.rating}</span>
+                if (parsedData.ratings && Array.isArray(parsedData.ratings)) {
+                    parsedData.ratings.forEach(rating => {
+                        let pPrice = calculatePlayerPrice(rating);
+                        totalPrice += pPrice;
+                        playerCount++;
+                        
+                        ratingsHtml += `
+                        <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex flex-col justify-center items-center shadow-sm">
+                            <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded w-full text-center">${rating}</span>
+                            <span class="text-[10px] text-gray-400 mt-1">${pPrice} د.م</span>
                         </div>`;
                     });
                 } else {
-                    playersHtml = '<p class="text-gray-500 text-xs text-center w-full col-span-2">لم يقم بقراءة اللاعبين بوضوح.</p>';
+                    ratingsHtml = '<p class="text-gray-500 text-xs text-center w-full col-span-4">لم يقم بقراءة الطاقات.</p>';
                 }
+
+                let dollarEquivalent = (totalPrice / 10).toFixed(1) + "$";
 
                 reportContent.innerHTML = `
                 <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl max-w-md mx-auto text-center">
@@ -180,22 +182,26 @@
 
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-blue-600/20 rounded-2xl p-4 border border-blue-500/30">
-                            <p class="text-gray-400 text-[10px] mb-1">القوة Collective</p>
+                            <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
                             <h4 class="text-3xl font-black text-blue-400">${parsedData.strength}</h4>
                         </div>
                         <div class="bg-yellow-500/10 rounded-2xl p-4 border border-yellow-500/30">
-                            <p class="text-gray-400 text-[10px] mb-1">السعر التقديري</p>
-                            <h4 class="text-3xl font-black text-yellow-500">${valuation.price} <span class="text-sm">د.م</span></h4>
+                            <p class="text-gray-400 text-[10px] mb-1">سعر الحساب الفعلي</p>
+                            <h4 class="text-3xl font-black text-yellow-500">${totalPrice} <span class="text-sm">د.م</span></h4>
+                            <p class="text-blue-400 text-[10px] mt-1 font-bold">(${dollarEquivalent})</p>
                         </div>
                     </div>
 
                     <div class="mb-6 text-right">
-                        <h5 class="text-gray-300 text-sm font-bold mb-3 border-b border-gray-700 pb-2 flex items-center gap-2">
-                            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                            نجوم التشكيلة المستخرجين:
+                        <h5 class="text-gray-300 text-sm font-bold mb-3 border-b border-gray-700 pb-2 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                طاقات اللاعبين المستخرجة:
+                            </div>
+                            <span class="text-xs bg-gray-700 px-2 py-1 rounded text-white">${playerCount} لاعب</span>
                         </h5>
-                        <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto players-scroll p-1">
-                            ${playersHtml}
+                        <div class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto players-scroll p-1">
+                            ${ratingsHtml}
                         </div>
                     </div>
 
@@ -206,20 +212,14 @@
                 </div>`;
                 
             } catch (error) {
-                // ترجمة رسائل الخطأ للمستخدم
-                let errorMessage = error.message;
-                if (errorMessage.includes("Quota") || errorMessage.includes("exceeded") || errorMessage.includes("429")) {
-                    errorMessage = "الضغط عالٍ جداً على البوت حالياً من قبل المستخدمين. يرجى الانتظار لمدة دقيقة واحدة ثم المحاولة مجدداً.";
-                }
-
                 reportContent.innerHTML = `
                 <div class="bg-red-900/50 border border-red-500 rounded-xl p-5 text-center">
-                    <p class='text-red-400 font-bold'>عذراً، لم نتمكن من التحليل</p>
-                    <p class='text-gray-300 text-sm mt-2'>${errorMessage}</p>
+                    <p class='text-red-400 font-bold'>عذراً، فشل التحليل!</p>
+                    <p class='text-gray-300 text-xs mt-2'>جرب مرة أخرى.</p>
                 </div>`;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +12 🚀 (إعادة المحاولة)';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +13 🚀 (تسعير اللاعبين)';
             }
         };
     </script>
