@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين (OpenRouter Engine)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين (وضع التجربة)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -37,7 +37,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>تحليل التشكيلة (خوارزمية حمزة) 🚀</span>
+            <span>ابدأ التحليل +19 🚀 (طباعة الأخطاء)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -46,6 +46,7 @@
     </main>
 
     <script>
+        // مفتاح OpenRouter الخاص بك
         const API_KEY = "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";
 
         const fileInput = document.getElementById('file-input');
@@ -88,7 +89,6 @@
             else if (rating === 108) price = 48;
             else if (rating > 108) price = 52;
 
-            // شرط القوة الإجمالية: إذا اللاعب 104+ والقوة < 3215، السعر 30 درهم فقط
             if (rating >= 104 && strength < 3215) {
                 price = Math.min(price, 30);
             }
@@ -108,9 +108,9 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري استخراج البيانات...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري الاتصال بالخادم...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يطبق خوارزمية DOOMN الآن...</p>";
+            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يقرأ البيانات... يرجى الانتظار.</p>";
 
             const base64Image = preview.src;
 
@@ -127,22 +127,46 @@
                             {
                                 role: "user",
                                 content: [
-                                    { type: "text", text: "Identify eFootball collective strength and all visible player ratings. Return JSON only: {\"strength\": 3210, \"ratings\": [102, 105...], \"note\": \"Arabic review\"}" },
+                                    { type: "text", text: "Identify eFootball collective strength and all visible player ratings. Return JSON only exactly like this: {\"strength\": 3210, \"ratings\": [102, 105], \"note\": \"Arabic review\"}" },
                                     { type: "image_url", image_url: { url: base64Image } }
                                 ]
                             }
-                        ],
-                        response_format: { type: "json_object" }
+                        ]
+                        // تم إزالة response_format مؤقتاً لأن بعض موديلات Llama Vision المجانية لا تدعمها وتسبب خطأ 400
                     })
                 });
 
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.error?.message || "خطأ في المفتاح");
+                
+                // صيد الأخطاء التفصيلي من OpenRouter
+                if (!response.ok) {
+                    throw new Error(`HTTP Error ${response.status}: ` + (result.error?.message || JSON.stringify(result)));
+                }
 
-                let data = JSON.parse(result.choices[0].message.content);
+                if (!result.choices || !result.choices[0].message) {
+                    throw new Error("استجابة غير متوقعة من الخادم: " + JSON.stringify(result));
+                }
+
+                let aiText = result.choices[0].message.content;
+                
+                // محاولة تنظيف الرد إذا أرسل الموديل نصوصاً مع الـ JSON
+                let jsonString = aiText;
+                let startIndex = aiText.indexOf('{');
+                let endIndex = aiText.lastIndexOf('}');
+                if (startIndex !== -1 && endIndex !== -1) {
+                    jsonString = aiText.substring(startIndex, endIndex + 1);
+                } else {
+                    throw new Error("الموديل لم يرجع بيانات بصيغة JSON. الرد كان: " + aiText);
+                }
+
+                let data = JSON.parse(jsonString);
                 let strength = parseInt(data.strength);
                 let playersTotal = 0;
                 let ratingsHtml = '';
+
+                if (!data.ratings || !Array.isArray(data.ratings)) {
+                    throw new Error("المصفوفة 'ratings' مفقودة في رد الذكاء الاصطناعي.");
+                }
 
                 data.ratings.forEach(r => {
                     let p = calculatePlayerPrice(r, strength);
@@ -162,7 +186,7 @@
                     <div class="grid grid-cols-2 gap-4 mb-6">
                         <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
                             <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
-                            <h4 class="text-3xl font-black text-blue-400">${strength}</h4>
+                            <h4 class="text-3xl font-black text-blue-400">${strength || "???"}</h4>
                         </div>
                         <div class="bg-yellow-500/10 p-4 rounded-2xl border border-yellow-500/20">
                             <p class="text-gray-400 text-[10px] mb-1">السعر التقديري</p>
@@ -175,15 +199,22 @@
                          <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
                     </div>
                     <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 leading-relaxed italic">
-                        "${data.note}"
+                        "${data.note || "تم التقييم بنجاح."}"
                     </div>
                 </div>`;
             } catch (e) {
-                reportContent.innerHTML = `<div class="bg-red-900/20 border border-red-500 p-5 rounded-xl text-red-400 text-xs text-center">يرجى المحاولة مرة أخرى، قد يكون الضغط عالياً على الخادم.</div>`;
+                // وضع المطور: طباعة الخطأ باللون الأخضر داخل خلفية سوداء لسهولة قراءته
+                reportContent.innerHTML = `
+                <div class="bg-red-900/40 border border-red-500 p-4 rounded-xl text-right">
+                    <p class='text-red-400 font-bold mb-2 text-sm'>❌ حدث خطأ برمجي (سجل الأخطاء):</p>
+                    <div class='bg-black p-3 rounded-lg overflow-x-auto text-left' dir="ltr">
+                        <code class='text-green-400 text-xs font-mono whitespace-pre-wrap break-words'>${e.message}</code>
+                    </div>
+                </div>`;
                 console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'تحليل التشكيلة (خوارزمية حمزة) 🚀';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +19 🚀 (طباعة الأخطاء)';
             }
         };
     </script>
