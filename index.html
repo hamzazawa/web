@@ -13,7 +13,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
-        .price-gradient { background: linear-gradient(to bottom, #fbbf24, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .players-scroll::-webkit-scrollbar { width: 4px; }
         .players-scroll::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
     </style>
@@ -22,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين (OpenRouter Engine)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -38,7 +37,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +15 🚀 (الخوارزمية المغربية)</span>
+            <span>تحليل التشكيلة (خوارزمية حمزة) 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -47,10 +46,7 @@
     </main>
 
     <script>
-        const k1 = "AIzaSyCvP3a6NDth9";
-        const k2 = "HTGHZnsF82a__8";
-        const k3 = "HNrhsX3c";
-        const KEY = k1 + k2 + k3;
+        const API_KEY = "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";
 
         const fileInput = document.getElementById('file-input');
         const preview = document.getElementById('preview');
@@ -75,45 +71,36 @@
             }
         };
 
-        // 1. خوارزمية تسعير اللاعب الفردي مع شرط القوة
-        function calculatePlayerPrice(r, collectiveStrength) {
+        function calculatePlayerPrice(r, strength) {
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
-            
-            let price = 2; // افتراضي
+            let price = 2;
 
             if (rating < 100) price = 2;
             else if (rating === 100) price = 3;
             else if (rating === 101) price = 4;
-            else if (rating === 102) price = 4; 
-            else if (rating === 103) price = 5; 
-            else if (rating === 104) price = 7; 
-            else if (rating === 105) price = 30; 
-            else if (rating === 106) price = 35; 
-            else if (rating === 107) price = 40; 
-            else if (rating === 108) price = 48; 
-            else if (rating > 108) price = 52;   
-            
-            // تطبيق الشرط الجديد: إذا كان 104 فما فوق وفريقه ضعيف نسبياً
-            if (rating >= 104 && collectiveStrength <= 3215) {
-                price = Math.min(price, 30); // تحديد السقف في 30 درهم فقط
-            }
+            else if (rating === 102) price = 4;
+            else if (rating === 103) price = 5;
+            else if (rating === 104) price = 7;
+            else if (rating === 105) price = 30;
+            else if (rating === 106) price = 35;
+            else if (rating === 107) price = 40;
+            else if (rating === 108) price = 48;
+            else if (rating > 108) price = 52;
 
+            // شرط القوة الإجمالية: إذا اللاعب 104+ والقوة < 3215، السعر 30 درهم فقط
+            if (rating >= 104 && strength < 3215) {
+                price = Math.min(price, 30);
+            }
             return price;
         }
 
-        // 2. خوارزمية علاوة القوة الإجمالية
-        function calculateStrengthBonus(strength) {
-            let s = parseInt(strength);
-            if (isNaN(s)) return 0;
-
+        function getStrengthBonus(s) {
             if (s >= 3200 && s < 3210) return 50;
             if (s >= 3210 && s < 3220) return 80;
             if (s >= 3220 && s < 3230) return 140;
-            if (s >= 3230 && s < 3240) return 220;
-            if (s >= 3240) return 350; // أضفتها لتكملة النسق المرتفع
-            
-            return 0; // إذا كانت أقل من 3200 لا توجد علاوة
+            if (s >= 3230) return 220;
+            return 0;
         }
 
         analyzeBtn.onclick = async () => {
@@ -121,147 +108,82 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المعالجة...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري استخراج البيانات...';
             resultContainer.classList.remove('hidden');
-            
-            reportContent.innerHTML = `
-                <div class="text-center p-5">
-                    <p class="text-blue-400 font-bold mb-2">البوت يستخرج الطاقات بالنموذج المجاني ⚡</p>
-                    <p class="text-gray-500 text-xs">جاري تطبيق خوارزمية الأسعار الجديدة...</p>
-                </div>
-            `;
+            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يطبق خوارزمية DOOMN الآن...</p>";
 
-            const base64Data = preview.src.split(',')[1];
+            const base64Image = preview.src;
 
             try {
-                // استخدام النموذج المجاني بشكل صلب (Hardcoded) لتقليل الطلبات وحماية الحصة!
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`;
-                
-                const promptText = `
-                استخرج بيانات التشكيلة من الصورة بدقة تامة. أرجع البيانات بصيغة JSON فقط بهذا الشكل:
-                {
-                    "strength": 3172,
-                    "ratings": [102, 104, 102, 102, 105, 103, 101, 103, 102, 101, 102, 100, 102, 100, 102, 101, 103, 102, 102, 102, 102, 102],
-                    "note": "ملاحظة فنية قصيرة بالعربية"
-                }
-                تأكد من وضع أرقام الطاقات فقط داخل مصفوفة ratings لجميع اللاعبين الظاهرين (حوالي 23 لاعب).
-                `;
-
-                const response = await fetch(url, {
+                const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: promptText },
-                                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-                            ]
-                        }],
-                        generationConfig: {
-                            response_mime_type: "application/json"
-                        }
+                        model: "meta-llama/llama-3.2-11b-vision-instruct:free",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    { type: "text", text: "Identify eFootball collective strength and all visible player ratings. Return JSON only: {\"strength\": 3210, \"ratings\": [102, 105...], \"note\": \"Arabic review\"}" },
+                                    { type: "image_url", image_url: { url: base64Image } }
+                                ]
+                            }
+                        ],
+                        response_format: { type: "json_object" }
                     })
                 });
 
                 const result = await response.json();
+                if (!response.ok) throw new Error(result.error?.message || "خطأ في المفتاح");
 
-                if (!response.ok) {
-                    throw new Error(result.error?.message || "رفض الخادم معالجة الصورة.");
-                }
-
-                let aiText = result.candidates[0].content.parts[0].text;
-                let parsedData = JSON.parse(aiText);
-                
-                let collectiveStrength = parseInt(parsedData.strength) || 3000;
-                let playersTotalValue = 0;
+                let data = JSON.parse(result.choices[0].message.content);
+                let strength = parseInt(data.strength);
+                let playersTotal = 0;
                 let ratingsHtml = '';
-                let playerCount = 0;
 
-                // 3. حساب اللاعبين الفردي
-                if (parsedData.ratings && Array.isArray(parsedData.ratings)) {
-                    parsedData.ratings.forEach(rating => {
-                        let rNum = parseInt(rating);
-                        if(!isNaN(rNum)) {
-                            let pPrice = calculatePlayerPrice(rNum, collectiveStrength);
-                            playersTotalValue += pPrice;
-                            playerCount++;
-                            
-                            // تلوين خاص للاعبين الغاليين
-                            let priceColor = pPrice >= 30 ? "text-yellow-400" : "text-gray-400";
-                            
-                            ratingsHtml += `
-                            <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 flex flex-col justify-center items-center shadow-sm hover:border-blue-500 transition-colors">
-                                <span class="text-sm font-black text-green-400 bg-green-400/10 px-2 py-0.5 rounded w-full text-center">${rNum}</span>
-                                <span class="text-[10px] ${priceColor} font-bold mt-1">${pPrice} د.م</span>
-                            </div>`;
-                        }
-                    });
-                }
+                data.ratings.forEach(r => {
+                    let p = calculatePlayerPrice(r, strength);
+                    playersTotal += p;
+                    ratingsHtml += `
+                    <div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-center">
+                        <span class="text-xs font-black text-green-400">${r}</span><br>
+                        <span class="text-[9px] text-gray-400">${p}د.م</span>
+                    </div>`;
+                });
 
-                if (playerCount === 0) throw new Error("لم يتم العثور على أرقام طاقات صالحة في الصورة.");
-
-                // 4. إضافة علاوة القوة الإجمالية
-                let strengthBonus = calculateStrengthBonus(collectiveStrength);
-                let finalPrice = playersTotalValue + strengthBonus;
-                let dollarEquivalent = (finalPrice / 10).toFixed(1) + "$";
-
-                // تنسيق عرض العلاوة إذا وجدت
-                let bonusHtml = strengthBonus > 0 
-                    ? `<div class="text-xs text-green-400 font-bold mt-2">+${strengthBonus} د.م (علاوة القوة الجماعية)</div>` 
-                    : ``;
+                let bonus = getStrengthBonus(strength);
+                let finalPrice = playersTotal + bonus;
 
                 reportContent.innerHTML = `
-                <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl max-w-md mx-auto text-center">
-                    <div class="mb-4">
-                        <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">DOOMN Verified</span>
-                    </div>
-
+                <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up text-center max-w-md mx-auto">
                     <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="bg-blue-600/20 rounded-2xl p-4 border border-blue-500/30">
+                        <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
                             <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
-                            <h4 class="text-3xl font-black text-blue-400">${parsedData.strength || "???"}</h4>
+                            <h4 class="text-3xl font-black text-blue-400">${strength}</h4>
                         </div>
-                        <div class="bg-yellow-500/10 rounded-2xl p-4 border border-yellow-500/30">
-                            <p class="text-gray-400 text-[10px] mb-1">السعر النهائي</p>
+                        <div class="bg-yellow-500/10 p-4 rounded-2xl border border-yellow-500/20">
+                            <p class="text-gray-400 text-[10px] mb-1">السعر التقديري</p>
                             <h4 class="text-3xl font-black text-yellow-500">${finalPrice} <span class="text-sm">د.م</span></h4>
-                            <p class="text-blue-400 text-[10px] mt-1 font-bold">(${dollarEquivalent})</p>
-                            ${bonusHtml}
+                            ${bonus > 0 ? `<p class="text-green-400 text-[10px] font-bold mt-1">+${bonus} علاوة قوة</p>` : ''}
                         </div>
                     </div>
-
-                    <div class="mb-6 text-right">
-                        <h5 class="text-gray-300 text-sm font-bold mb-3 border-b border-gray-700 pb-2 flex items-center justify-between">
-                            <div class="flex items-center gap-2">
-                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                تقييم اللاعبين (${playerCount}):
-                            </div>
-                            <span class="text-xs text-gray-400">مجموعهم: ${playersTotalValue} د.م</span>
-                        </h5>
-                        <div class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto players-scroll p-1">
-                            ${ratingsHtml}
-                        </div>
+                    <div class="text-right mb-4">
+                         <p class="text-gray-400 text-[10px] mb-2 font-bold uppercase">تفاصيل الطاقات:</p>
+                         <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
                     </div>
-
-                    <div class="bg-black/20 rounded-2xl p-4 text-right border border-white/5">
-                        <p class="text-gray-500 text-[10px] mb-1">توصية المهندس آلي</p>
-                        <p class="text-gray-300 text-xs leading-relaxed">${parsedData.note || "تشكيلة ممتازة."}</p>
+                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 leading-relaxed italic">
+                        "${data.note}"
                     </div>
                 </div>`;
-                
-            } catch (error) {
-                let isQuota = error.message.toLowerCase().includes("quota") || error.message.includes("429");
-                let displayError = isQuota ? "الضغط عالٍ جداً على البوت الآن، يرجى الانتظار دقيقة." : error.message;
-
-                reportContent.innerHTML = `
-                <div class="bg-red-900/50 border border-red-500 rounded-xl p-5 text-center">
-                    <p class='text-red-400 font-bold mb-2'>عذراً، فشل التحليل!</p>
-                    <div class='bg-black/40 p-2 rounded text-left overflow-x-auto'>
-                        <p class='text-gray-300 text-[10px] font-mono' dir="ltr">${displayError}</p>
-                    </div>
-                </div>`;
+            } catch (e) {
+                reportContent.innerHTML = `<div class="bg-red-900/20 border border-red-500 p-5 rounded-xl text-red-400 text-xs text-center">يرجى المحاولة مرة أخرى، قد يكون الضغط عالياً على الخادم.</div>`;
+                console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +15 🚀 (الخوارزمية المغربية)';
+                analyzeBtn.innerHTML = 'تحليل التشكيلة (خوارزمية حمزة) 🚀';
             }
         };
     </script>
