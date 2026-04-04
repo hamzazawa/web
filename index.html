@@ -13,7 +13,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
-        .price-gradient { background: linear-gradient(to bottom, #fbbf24, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .players-scroll::-webkit-scrollbar { width: 4px; }
         .players-scroll::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
     </style>
@@ -47,7 +46,7 @@
     </main>
 
     <script>
-        // مفتاح Groq الخاص بك (مقسم للأمان)
+        // مفتاح Groq الخاص بك
         const g1 = "gsk_d4SyISmPwMOZ7cEv556f";
         const g2 = "WGdyb3FYs7WEmwSvMlCdKWjCWDkoNWNT";
         const API_KEY = g1 + g2;
@@ -91,7 +90,6 @@
             else if (rating === 108) price = 48;
             else if (rating > 108) price = 52;
             
-            // شرط حمزة: إذا القوة تحت 3215، أقصى سعر للاعب 104+ هو 30
             if (rating >= 104 && strength < 3215) price = Math.min(price, 30);
             return price;
         }
@@ -123,7 +121,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "llama-3.2-11b-vision-preview",
+                        // 🟢 تم التحديث هنا للموديل الأقوى والمدعوم رسمياً 🟢
+                        model: "meta-llama/llama-4-scout-17b-16e-instruct",
                         messages: [
                             {
                                 role: "user",
