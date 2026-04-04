@@ -14,7 +14,6 @@
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
         .price-gradient { background: linear-gradient(to bottom, #fbbf24, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        /* تصميم سكرول خفي لقائمة اللاعبين */
         .players-scroll::-webkit-scrollbar { width: 4px; }
         .players-scroll::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
     </style>
@@ -39,7 +38,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +10 🚀 (استخراج اللاعبين)</span>
+            <span>ابدأ التحليل +11 🚀 (مانع التجمد)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -103,30 +102,36 @@
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري مسح اللاعبين...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-gray-400 p-5 text-center'>البوت يقرأ وجوه وطاقات اللاعبين... قد يستغرق هذا بضع ثوانٍ.</p>";
+            
+            // إضافة تنبيه للمستخدم بأن الأمر يأخذ وقتاً
+            reportContent.innerHTML = `
+                <div class="text-center p-5">
+                    <p class="text-blue-400 font-bold mb-2">البوت يقرأ وجوه وطاقات اللاعبين...</p>
+                    <p class="text-gray-500 text-xs">قراءة 18 لاعباً تستغرق حوالي 10 إلى 20 ثانية، يرجى الانتظار ولا تغلق الصفحة.</p>
+                </div>
+            `;
 
             const base64Data = preview.src.split(',')[1];
 
             try {
                 const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
                 const modelsData = await modelsRes.json();
+                
+                if (!modelsRes.ok) throw new Error("مفتاح API غير صالح أو محظور.");
+
                 const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-                let targetModel = validModels.find(m => m.name.includes("pro")); // نستخدم Pro لأنه أفضل في قراءة النصوص المتعددة
+                let targetModel = validModels.find(m => m.name.includes("pro")); 
                 if (!targetModel) targetModel = validModels.find(m => m.name.includes("flash"));
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
                 
-                // هندسة أوامر جديدة لاستخراج المصفوفة
+                // هندسة الأوامر المبسطة والواضحة
                 const promptText = `
-                أنت خبير eFootball. استخرج البيانات التالية من الصورة بدقة وأرجعها حصراً بصيغة JSON:
-                {
-                    "strength": "رقم القوة الجماعية Collective Strength",
-                    "players": [
-                        {"name": "اسم اللاعب", "rating": "طاقته بالأرقام"}
-                    ],
-                    "note": "ملاحظة قصيرة جداً بالعربية"
-                }
-                استخرج أبرز اللاعبين الواضحين في التشكيلة (على الأقل 10 لاعبين إن أمكن).`;
+                استخرج بيانات eFootball من الصورة.
+                المطلوب: القوة الجماعية (Collective Strength)، وقائمة بأهم اللاعبين وقوتهم.
+                الهيكلة المطلوبة:
+                {"strength": "رقم", "players": [{"name": "اسم اللاعب", "rating": "رقم"}], "note": "ملاحظة"}
+                `;
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -137,24 +142,26 @@
                                 { text: promptText },
                                 { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                             ]
-                        }]
+                        }],
+                        // الميزة السحرية الجديدة: إجبار جوجل على إرجاع JSON نظيف
+                        generationConfig: {
+                            response_mime_type: "application/json"
+                        }
                     })
                 });
 
                 const result = await response.json();
 
-                if (result.candidates && result.candidates[0].content) {
-                    let aiText = result.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
-                    let parsedData;
-                    try {
-                        parsedData = JSON.parse(aiText);
-                    } catch (e) {
-                        throw new Error("فشل البوت في تنسيق البيانات.");
-                    }
+                // حماية من الأخطاء (مانع التجمد)
+                if (!response.ok) {
+                    throw new Error(result.error?.message || "رفض الخادم إتمام الطلب.");
+                }
 
+                if (result.candidates && result.candidates[0].content) {
+                    let aiText = result.candidates[0].content.parts[0].text;
+                    let parsedData = JSON.parse(aiText);
                     let valuation = calculateDynamicPrice(parsedData.strength);
 
-                    // بناء كود HTML لعرض اللاعبين
                     let playersHtml = '';
                     if (parsedData.players && parsedData.players.length > 0) {
                         parsedData.players.forEach(player => {
@@ -165,7 +172,7 @@
                             </div>`;
                         });
                     } else {
-                        playersHtml = '<p class="text-gray-500 text-xs text-center w-full">لم يتمكن من قراءة أسماء اللاعبين بوضوح.</p>';
+                        playersHtml = '<p class="text-gray-500 text-xs text-center w-full col-span-2">لم يتم قراءة اللاعبين بوضوح.</p>';
                     }
 
                     reportContent.innerHTML = `
@@ -200,12 +207,20 @@
                             <p class="text-gray-300 text-xs leading-relaxed">${parsedData.note}</p>
                         </div>
                     </div>`;
+                } else {
+                    throw new Error("لم يتم استخراج البيانات المطلوبة.");
                 }
             } catch (error) {
-                reportContent.innerHTML = `<p class='text-red-400 text-center p-5'>حدث خطأ: ${error.message}</p>`;
+                // الآن إذا حدث أي خطأ، سيطبع هنا ولن يعلق!
+                reportContent.innerHTML = `
+                <div class="bg-red-900/50 border border-red-500 rounded-xl p-5 text-center">
+                    <p class='text-red-400 font-bold'>عذراً، فشل التحليل!</p>
+                    <p class='text-gray-300 text-xs mt-2'>السبب التقني: ${error.message}</p>
+                    <p class='text-gray-400 text-xs mt-2'>جرب صورة أوضح أو انتظر دقيقة وأعد المحاولة.</p>
+                </div>`;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +10 🚀 (استخراج اللاعبين)';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +11 🚀 (إعادة المحاولة)';
             }
         };
     </script>
