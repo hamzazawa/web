@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب (محرك 90B عالي الدقة)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب (محرك 90B المستقر)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -143,7 +143,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "llama-3.2-90b-vision-preview",
+                        // 🔥 تم التحديث للنسخة المستقرة الرسمية 🔥
+                        model: "llama-3.2-90b-vision-instruct",
                         messages: [
                             {
                                 role: "user",
@@ -158,7 +159,6 @@
 
                 const result = await response.json();
                 
-                // صيد الأخطاء إذا رفض السيرفر الطلب
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ` + (result.error?.message || JSON.stringify(result)));
                 }
@@ -169,7 +169,6 @@
 
                 let aiText = result.choices[0].message.content;
                 
-                // محاولة استخراج JSON من الرد
                 let jsonString = aiText;
                 let startIndex = aiText.indexOf('{');
                 let endIndex = aiText.lastIndexOf('}');
@@ -207,7 +206,7 @@
                 }
 
                 if (validPlayersArray.length < 23) {
-                    throw new Error(`⚠️ تم مسح ${validPlayersArray.length} لاعب فقط بدلاً من 23. يرجى التأكد من وضوح الصورة.`);
+                    throw new Error(`⚠️ تم مسح ${validPlayersArray.length} لاعب فقط بدلاً من 23. يرجى التأكد من وضوح الصورة بشكل ممتاز (سكرين شوت أصلية).`);
                 }
 
                 // تطبيق شرط الحساب القسط
@@ -270,7 +269,6 @@
                     <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تم تحليل التشكيلة بنجاح."}"</div>
                 </div>`;
             } catch (e) {
-                // وضع المطور الصريح: سيطبع لك السبب أياً كان!
                 reportContent.innerHTML = `
                 <div class="bg-red-900/40 border border-red-500 p-4 rounded-xl text-right">
                     <p class='text-red-400 font-bold mb-2 text-sm'>❌ سجل الأخطاء (Developer Log):</p>
