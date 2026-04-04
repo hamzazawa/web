@@ -33,7 +33,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل العميق 3.1</span>
+            <span>ابدأ التحليل (النسخة المحدثة) 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -44,7 +44,7 @@
     </main>
 
     <script>
-        // تقسيم المفتاح لحمايته
+        // المفتاح محمي ومقسم
         const k1 = "AIzaSyCvP3a6NDth9";
         const k2 = "HTGHZnsF82a__8";
         const k3 = "HNrhsX3c";
@@ -84,8 +84,8 @@
             const base64Data = preview.src.split(',')[1];
 
             try {
-                // التعديل: استخدام gemini-1.5-pro لضمان دعم تحليل الصور عبر v1
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${KEY}`;
+                // استخدام gemini-1.5-flash-latest لضمان التوافق التام مع واجهة برمجة التطبيقات المحدثة
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${KEY}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -93,7 +93,7 @@
                     body: JSON.stringify({
                         contents: [{
                             parts: [
-                                { text: "أنت خبير تقني ومهندس كهرباء. حلل الصورة باللغة العربية: إذا كانت eFootball أعط نصائح للتشكيلة، إذا كانت دارة كهربائية اشرحها واحسب القيم، إذا كان كود Sketchware اشرحه." },
+                                { text: "أنت مهندس خبير. أجب باللغة العربية: إذا كانت الصورة لتشكيلة eFootball أعط نصائح، إذا كانت دارة كهربائية اشرحها، إذا كان كود Sketchware اشرحه." },
                                 { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                             ]
                         }]
@@ -105,16 +105,15 @@
                 if (result.candidates && result.candidates[0].content) {
                     responseText.innerText = result.candidates[0].content.parts[0].text;
                 } else if (result.error) {
-                    // إذا فشل البرو، نجرب الفلاش بآخر محاولة برابط v1beta
                     responseText.innerText = "خطأ من جوجل: " + result.error.message;
                 } else {
                     responseText.innerText = "تعذر التحليل، جرب صورة أخرى.";
                 }
             } catch (error) {
-                responseText.innerText = "حدث خطأ في الاتصال بالخادم.";
+                responseText.innerText = "حدث خطأ في الاتصال. تأكد من جودة الإنترنت لديك.";
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل العميق 3.1';
+                analyzeBtn.innerHTML = 'ابدأ التحليل (النسخة المحدثة) 🚀';
             }
         };
     </script>
