@@ -11,7 +11,6 @@
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .loader { border: 4px solid rgba(255, 255, 255, 0.1); border-top: 4px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* أنيميشن لظهور التقرير */
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
     </style>
@@ -36,7 +35,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +4 🚀</span>
+            <span>ابدأ التحليل +5 🚀 (النسخة الذكية)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -80,31 +79,37 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري تحليل التشكيلة...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري تحليل الصورة...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-gray-400 p-5'>جاري قراءة البطاقات Collective Strength... انتظر لحظة.</p>";
+            reportContent.innerHTML = "<p class='text-gray-400 p-5 text-center'>البوت يقرأ الأرقام ويقيم البطاقات... انتظر قليلاً.</p>";
 
             const base64Data = preview.src.split(',')[1];
 
             try {
-                // الكود الذكي لجلب الموديل
-                const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
-                const modelsData = await modelsRes.json();
-                const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                // استخدام gemini-1.5-pro لأنه الأقوى في قراءة النصوص من الصور (OCR)
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${KEY}`;
                 
-                let targetModel = validModels.find(m => m.name.includes("flash"));
-                if (!targetModel) targetModel = validModels.find(m => m.name.includes("pro-vision"));
-                if (!targetModel) targetModel = validModels.find(m => m.name.includes("pro"));
+                // الأوامر الصارمة للبوت (Prompt Engineering)
+                const promptText = `
+                أنت خبير eFootball. انظر للصورة المرفقة واستخرج منها البيانات التالية بدقة:
+                1. القوة الجماعية (Collective Strength) المكتوبة باللون الأصفر.
+                2. قدر سعر الحساب بالدرهم المغربي (رقم تقريبي بناءً على اللاعبين).
+                3. ملاحظة فنية عن التشكيلة.
                 
-                const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
-                
+                يجب أن يكون ردك حصرياً بصيغة JSON فقط، بدون أي كلام إضافي، بهذا الشكل:
+                {
+                    "strength": "رقم القوة هنا",
+                    "price": "السعر المتوقع هنا",
+                    "note": "ملاحظتك هنا"
+                }`;
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         contents: [{
                             parts: [
-                                { text: "أنت خبير تقني في eFootball وتثمين الحسابات. أجب بالعربية فقط. حلل الصورة بدقة: استخرج القوة Collective Strength. ثم أوجد سعر الحساب المتوقع بالدرهم المغربي (د.م) بناءً على ندرة البطاقات (ميسي، ديل بييرو، رونالدو الظاهرة). ثم ملاحظة فنية صغيرة. لا تستخدم شريط تقدم." },
+                                { text: promptText },
                                 { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                             ]
                         }]
@@ -114,8 +119,20 @@
                 const result = await response.json();
 
                 if (result.candidates && result.candidates[0].content) {
-                    // تحليل الرد (هنا سأصنع القالب الثابت بناءً على الصورة المقدمة كنموذج)
+                    let aiText = result.candidates[0].content.parts[0].text;
                     
+                    // تنظيف الرد من أي علامات Markdown لضمان عمل JSON
+                    aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    
+                    let parsedData;
+                    try {
+                        parsedData = JSON.parse(aiText);
+                    } catch (e) {
+                        // في حال أخطأ البوت ولم يرسل JSON
+                        parsedData = { strength: "تعذر القراءة", price: "غير محدد", note: aiText };
+                    }
+
+                    // وضع البيانات الحقيقية داخل التصميم!
                     const responseHtml = `
                     <div class="glass rounded-2xl p-6 border-l-4 border-yellow-500 animate-fade-in-up text-center max-w-lg mx-auto">
                         <div class="flex items-center justify-center gap-2 mb-5">
@@ -125,38 +142,37 @@
 
                         <div class="bg-blue-600/20 rounded-xl p-5 mb-5 border border-blue-600/30">
                             <p class="text-gray-400 text-sm">قوة الفريق Collective Strength</p>
-                            <h4 class="text-5xl font-black text-blue-400 mt-1 tracking-tighter">3219</h4>
+                            <h4 class="text-5xl font-black text-blue-400 mt-1 tracking-tighter">${parsedData.strength}</h4>
                         </div>
 
                         <div class="bg-gray-800/50 rounded-xl p-5 mb-5 border border-gray-700/50">
                             <p class="text-gray-400 text-sm">السعر المتوقع للحساب</p>
                             <h4 class="text-4xl font-bold text-yellow-500 mt-1 flex justify-center items-end gap-1">
-                                <span class="text-5xl font-black">2200 - 3500</span>
-                                <span class="text-2xl font-normal text-gray-300 ml-1">د.م Morocco</span>
+                                <span class="text-5xl font-black">${parsedData.price}</span>
+                                <span class="text-2xl font-normal text-gray-300 ml-1">د.م</span>
                             </h4>
-                            <p class="text-gray-500 text-xs mt-2">تقدير بناءً على ندرة البطاقات (ميسي، ديل بييرو، رونالدو)</p>
                         </div>
 
                         <div class="bg-gray-800/30 rounded-xl p-4 text-right border border-gray-700/30">
                             <div class="flex items-center gap-2 mb-2">
                                 <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <p class="text-gray-300 font-medium text-sm">ملاحظة المهندس آلي:</p>
+                                <p class="text-gray-300 font-medium text-sm">ملاحظة الذكاء الاصطناعي:</p>
                             </div>
                             <p class="text-gray-400 leading-relaxed text-sm">
-                                تشكيلة "ميتا" خارقة، يعتبر حسابك من الفئة العليا. ينصح بتثبيت بيكهام في المحور لتعزيز الاستحواذ.
+                                ${parsedData.note}
                             </p>
                         </div>
                     </div>
                     `;
                     reportContent.innerHTML = responseHtml;
                 } else {
-                    reportContent.innerHTML = "<p class='text-red-400 p-5'>اعتذر، لم أتمكن من استخراج تقرير دقيق للتشكيلة.</p>";
+                    reportContent.innerHTML = "<p class='text-red-400 p-5 text-center'>البوت لم يتمكن من رؤية الصورة بوضوح.</p>";
                 }
             } catch (error) {
-                reportContent.innerHTML = "<p class='text-red-400 p-5'>حدث خطأ في الاتصال بالخادم. جرب مرة أخرى.</p>";
+                reportContent.innerHTML = "<p class='text-red-400 p-5 text-center'>حدث خطأ في الاتصال بالخادم.</p>";
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +4 🚀';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +5 🚀';
             }
         };
     </script>
