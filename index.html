@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب (محرك 90B المستقر)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب الذكي (النسخة المستقرة)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -32,13 +32,13 @@
                     <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
                 </div>
                 <p class="text-gray-300 font-bold">اختر صورة التشكيلة</p>
-                <p class="text-gray-500 text-xs mt-2">لضمان دقة القراءة، استخدم "سكرين شوت" واضحة</p>
+                <p class="text-gray-500 text-xs mt-2">يفضل رفع صورة بجودة أصلية لضمان قراءة دكة البدلاء</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-xl shadow-md mx-auto">
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>فحص التشكيلة (دقة عالية) 🚀</span>
+            <span>تحليل التشكيلة الآن 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -129,9 +129,9 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المسح الدقيق 90B...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المعالجة...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يقرأ الأرقام بدقة عالية الآن... قد يأخذ وقتاً أطول قليلاً.</p>";
+            reportContent.innerHTML = "<p class='text-blue-400 p-5 text-center font-bold'>البوت يستخرج البيانات الآن... يرجى الانتظار.</p>";
 
             const base64Image = preview.src;
 
@@ -143,13 +143,13 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        // 🔥 تم التحديث للنسخة المستقرة الرسمية 🔥
-                        model: "llama-3.2-90b-vision-instruct",
+                        // 🔥 الموديل الرسمي والمستقر والمجاني من Groq 🔥
+                        model: "llama-3.2-11b-vision-instruct",
                         messages: [
                             {
                                 role: "user",
                                 content: [
-                                    { type: "text", text: "Act as a highly precise OCR scanner. Read the eFootball 'Collective Strength' number. Then, carefully extract EXACTLY 23 player overall ratings (usually numbers between 90 and 108 located on the player cards). DO NOT guess or hallucinate. Return valid JSON only: {\"strength\": 3210, \"ratings\": [102, 105, 100...], \"note\": \"Arabic review\"}" },
+                                    { type: "text", text: "Identify eFootball collective strength number. Then extract ALL visible player overall ratings (numbers between 90 and 110). Find as many as possible, ideally 23. Return valid JSON only: {\"strength\": 3210, \"ratings\": [102, 105, 100...], \"note\": \"Arabic review\"}" },
                                     { type: "image_url", image_url: { url: base64Image } }
                                 ]
                             }
@@ -163,10 +163,6 @@
                     throw new Error(`HTTP ${response.status}: ` + (result.error?.message || JSON.stringify(result)));
                 }
 
-                if (!result.choices || !result.choices[0].message) {
-                    throw new Error("استجابة غير صالحة من Groq: " + JSON.stringify(result));
-                }
-
                 let aiText = result.choices[0].message.content;
                 
                 let jsonString = aiText;
@@ -176,16 +172,10 @@
                 if (startIndex !== -1 && endIndex !== -1) {
                     jsonString = aiText.substring(startIndex, endIndex + 1);
                 } else {
-                    throw new Error("لم يتم العثور على JSON في الرد. الرد الخام: " + aiText);
+                    throw new Error("لم يتم العثور على بيانات JSON.");
                 }
 
-                let data;
-                try {
-                    data = JSON.parse(jsonString);
-                } catch (parseError) {
-                    throw new Error("فشل في تحويل الرد إلى JSON. الرد الخام: " + jsonString);
-                }
-                
+                let data = JSON.parse(jsonString);
                 let strength = parseInt(data.strength) || 0;
                 let playersTotal = 0;
                 let ratingsHtml = '';
@@ -197,7 +187,7 @@
                 if (data.ratings && Array.isArray(data.ratings)) {
                     data.ratings.forEach(r => {
                         let rNum = parseInt(r);
-                        if (!isNaN(rNum) && rNum > 50 && rNum < 120) { 
+                        if (!isNaN(rNum) && rNum > 70 && rNum < 120) { 
                             validPlayersArray.push(rNum);
                             if (rNum > 104) highTierCount++;
                             sumRatings += rNum;
@@ -205,11 +195,11 @@
                     });
                 }
 
-                if (validPlayersArray.length < 23) {
-                    throw new Error(`⚠️ تم مسح ${validPlayersArray.length} لاعب فقط بدلاً من 23. يرجى التأكد من وضوح الصورة بشكل ممتاز (سكرين شوت أصلية).`);
+                // 🔥 المرونة الذكية: نقبل التحليل إذا وجد 15 لاعباً على الأقل 🔥
+                if (validPlayersArray.length < 15) {
+                    throw new Error(`⚠️ الصورة غير واضحة للذكاء الاصطناعي! تمكن من قراءة ${validPlayersArray.length} لاعبين فقط. يرجى رفع صورة بجودة أعلى.`);
                 }
 
-                // تطبيق شرط الحساب القسط
                 let isPremium = (strength > 3219 || highTierCount > 4);
 
                 validPlayersArray.forEach(rNum => {
@@ -232,13 +222,22 @@
                 else if (avg >= 106) { avgText = "ضخم للغاية"; avgColor = "text-green-400"; }
 
                 let bonus = getStrengthBonus(strength);
-                
                 let jitter = Math.floor(Math.random() * 3) - 1; 
                 let finalPrice = playersTotal + bonus + jitter;
                 if(finalPrice < 0) finalPrice = 0; 
 
+                // رسالة تنبيه لطيفة إذا لم يتم قراءة كل اللاعبين
+                let warningHtml = validPlayersArray.length < 23 
+                    ? `<div class="bg-yellow-900/30 border border-yellow-600/50 text-yellow-500 text-[10px] p-2 rounded-xl mb-4 text-center">
+                        ⚠️ لاحظ البوت ${validPlayersArray.length} لاعباً فقط بوضوح من أصل 23. (تم تقييم الظاهرين فقط).
+                       </div>` 
+                    : ``;
+
                 reportContent.innerHTML = `
                 <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up text-center max-w-md mx-auto">
+                    
+                    ${warningHtml}
+
                     <div class="grid grid-cols-2 gap-4 mb-4">
                         <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
                             <p class="text-gray-400 text-[10px] mb-1">القوة الجماعية</p>
@@ -266,12 +265,11 @@
                          <p class="text-gray-400 text-[10px] mb-2 font-bold uppercase">الطاقات المستخرجة (${validPlayersArray.length}):</p>
                          <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
                     </div>
-                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تم تحليل التشكيلة بنجاح."}"</div>
                 </div>`;
             } catch (e) {
                 reportContent.innerHTML = `
                 <div class="bg-red-900/40 border border-red-500 p-4 rounded-xl text-right">
-                    <p class='text-red-400 font-bold mb-2 text-sm'>❌ سجل الأخطاء (Developer Log):</p>
+                    <p class='text-red-400 font-bold mb-2 text-sm'>❌ سجل الأخطاء:</p>
                     <div class='bg-black p-3 rounded-lg overflow-x-auto text-left' dir="ltr">
                         <code class='text-green-400 text-xs font-mono whitespace-pre-wrap break-words'>${e.message}</code>
                     </div>
@@ -279,7 +277,7 @@
                 console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'فحص التشكيلة (دقة عالية) 🚀';
+                analyzeBtn.innerHTML = 'تحليل التشكيلة الآن 🚀';
             }
         };
     </script>
