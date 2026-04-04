@@ -21,7 +21,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2 tracking-tight">DOOMN <span class="text-white">AI Pro</span></h1>
-        <p class="text-gray-400 text-lg">تقييم الحساب بناءً على طاقات اللاعبين (Groq ⚡)</p>
+        <p class="text-gray-400 text-lg">تقييم الحساب الذكي (Groq Engine)</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -74,31 +74,57 @@
             }
         };
 
-        function calculatePlayerPrice(r, strength) {
+        // 1. خوارزمية التسعير المشروطة للاعبين
+        function calculatePlayerPrice(r, isPremium) {
             let rating = parseInt(r);
             if (isNaN(rating)) return 0;
-            let price = 2;
-            if (rating < 100) price = 2;
-            else if (rating === 100) price = 3;
-            else if (rating === 101) price = 4;
-            else if (rating === 102) price = 4;
-            else if (rating === 103) price = 5;
-            else if (rating === 104) price = 7;
-            else if (rating === 105) price = 30;
-            else if (rating === 106) price = 35;
-            else if (rating === 107) price = 40;
-            else if (rating === 108) price = 48;
-            else if (rating > 108) price = 52;
             
-            if (rating >= 104 && strength < 3215) price = Math.min(price, 30);
-            return price;
+            // القاعدة الثابتة
+            if (rating < 100) return 1;
+            if (rating === 100) return 2;
+            if (rating === 101) return 3;
+            if (rating === 102) return 4;
+            if (rating === 103) return 5;
+            if (rating === 104) return 9;
+            
+            // التسعير المتغير (إذا كان الحساب قسط/قوي)
+            if (isPremium) {
+                if (rating === 105) return 30;
+                if (rating === 106) return 35;
+                if (rating === 107) return 40;
+                if (rating === 108) return 45;
+                if (rating >= 109) return 50;
+            } else {
+                if (rating === 105) return 18;
+                if (rating === 106) return 23;
+                if (rating === 107) return 26;
+                if (rating === 108) return 29;
+                if (rating >= 109) return 32;
+            }
+            return 1;
         }
 
+        // 2. خوارزمية علاوة القوة الإجمالية الشاملة
         function getStrengthBonus(s) {
+            if (s < 3100) return 5;
+            if (s >= 3100 && s < 3140) return 10;
+            if (s >= 3140 && s < 3160) return 15;
+            if (s >= 3160 && s < 3180) return 20;
+            if (s >= 3180 && s < 3200) return 30;
             if (s >= 3200 && s < 3210) return 50;
-            if (s >= 3210 && s < 3220) return 80;
-            if (s >= 3220 && s < 3230) return 140;
-            if (s >= 3230) return 220;
+            if (s >= 3210 && s < 3215) return 70;
+            if (s >= 3215 && s < 3220) return 120;
+            if (s >= 3220 && s < 3230) return 160;
+            if (s >= 3230 && s < 3240) return 200;
+            if (s >= 3240 && s < 3250) return 230;
+            if (s >= 3250 && s < 3260) return 250;
+            if (s >= 3260 && s < 3270) return 320;
+            if (s >= 3270 && s < 3280) return 390;
+            if (s >= 3280 && s < 3290) return 430;
+            if (s >= 3290 && s < 3300) return 480;
+            if (s >= 3300 && s < 3315) return 520;
+            if (s >= 3315 && s < 3325) return 580;
+            if (s >= 3325) return 620;
             return 0;
         }
 
@@ -121,7 +147,6 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        // 🟢 تم التحديث هنا للموديل الأقوى والمدعوم رسمياً 🟢
                         model: "meta-llama/llama-4-scout-17b-16e-instruct",
                         messages: [
                             {
@@ -142,37 +167,91 @@
                 let jsonString = aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1);
                 let data = JSON.parse(jsonString);
                 
-                let s = parseInt(data.strength) || 0;
+                let strength = parseInt(data.strength) || 0;
                 let playersTotal = 0;
                 let ratingsHtml = '';
                 
-                data.ratings.forEach(r => {
-                    let p = calculatePlayerPrice(r, s);
-                    playersTotal += p;
-                    ratingsHtml += `<div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-center">
-                        <span class="text-xs font-black text-green-400">${r}</span><br>
-                        <span class="text-[9px] text-gray-400">${p}د.م</span>
-                    </div>`;
-                });
+                // حساب عدد اللاعبين الذين طاقتهم أكبر من 104
+                let highTierCount = 0;
+                let sumRatings = 0;
+                let validPlayersCount = 0;
 
-                let bonus = getStrengthBonus(s);
-                let final = playersTotal + bonus;
+                if (data.ratings && Array.isArray(data.ratings)) {
+                    data.ratings.forEach(r => {
+                        let rNum = parseInt(r);
+                        if (!isNaN(rNum)) {
+                            if (rNum > 104) highTierCount++; // 105 وما فوق
+                            sumRatings += rNum;
+                            validPlayersCount++;
+                        }
+                    });
+                }
+
+                // تطبيق شرط الحساب القسط (Premium)
+                let isPremium = (strength > 3219 || highTierCount > 4);
+
+                if (data.ratings && Array.isArray(data.ratings)) {
+                    data.ratings.forEach(r => {
+                        let rNum = parseInt(r);
+                        if (!isNaN(rNum)) {
+                            let p = calculatePlayerPrice(rNum, isPremium);
+                            playersTotal += p;
+                            ratingsHtml += `<div class="bg-gray-800/80 border border-gray-700 rounded-lg p-2 text-center">
+                                <span class="text-xs font-black text-green-400">${rNum}</span><br>
+                                <span class="text-[9px] text-gray-400">${p}د.م</span>
+                            </div>`;
+                        }
+                    });
+                }
+
+                // حساب متوسط الطاقات
+                let avg = validPlayersCount > 0 ? (sumRatings / validPlayersCount).toFixed(1) : 0;
+                let avgText = "";
+                let avgColor = "";
+
+                if (avg < 102) { avgText = "ضعيف"; avgColor = "text-red-400"; }
+                else if (avg >= 102 && avg < 103) { avgText = "متوسط"; avgColor = "text-yellow-400"; }
+                else if (avg >= 103 && avg < 104) { avgText = "قوي"; avgColor = "text-blue-400"; }
+                else if (avg >= 104 && avg < 106) { avgText = "قوي جداً"; avgColor = "text-purple-400"; }
+                else if (avg >= 106) { avgText = "ضخم للغاية"; avgColor = "text-green-400"; }
+
+                let bonus = getStrengthBonus(strength);
+                
+                // التذبذب العشوائي (Jitter) بين -1 و +1 درهم
+                let jitter = Math.floor(Math.random() * 3) - 1; 
+                let finalPrice = playersTotal + bonus + jitter;
+                if(finalPrice < 0) finalPrice = 0; // لضمان عدم وجود سعر سالب
 
                 reportContent.innerHTML = `
                 <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up text-center max-w-md mx-auto">
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
                         <div class="bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
                             <p class="text-gray-400 text-[10px] mb-1">القوة</p>
-                            <h4 class="text-3xl font-black text-blue-400">${s}</h4>
+                            <h4 class="text-3xl font-black text-blue-400">${strength}</h4>
                         </div>
                         <div class="bg-yellow-500/10 p-4 rounded-2xl border border-yellow-500/20">
                             <p class="text-gray-400 text-[10px] mb-1">السعر النهائي</p>
-                            <h4 class="text-3xl font-black text-yellow-500">${final} <span class="text-sm">د.م</span></h4>
+                            <h4 class="text-3xl font-black text-yellow-500">${finalPrice} <span class="text-sm">د.م</span></h4>
                             ${bonus > 0 ? `<p class="text-green-400 text-[9px] font-bold">+${bonus} علاوة</p>` : ''}
                         </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll mb-4">${ratingsHtml}</div>
-                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note}"</div>
+
+                    <div class="bg-gray-800/40 p-4 rounded-2xl border border-gray-700/50 mb-6 flex justify-between items-center">
+                        <div class="text-right">
+                            <p class="text-gray-400 text-[10px] mb-1">مجموع الطاقات:</p>
+                            <h5 class="text-lg font-bold text-gray-200">${sumRatings} <span class="text-[10px] text-gray-500">نقطة</span></h5>
+                        </div>
+                        <div class="text-left border-r border-gray-600 pr-4">
+                            <p class="text-gray-400 text-[10px] mb-1">متوسط اللاعب:</p>
+                            <h5 class="text-xl font-black text-white">${avg} <span class="text-xs ${avgColor}">${avgText}</span></h5>
+                        </div>
+                    </div>
+
+                    <div class="text-right mb-4">
+                         <p class="text-gray-400 text-[10px] mb-2 font-bold uppercase">تفاصيل الطاقات (${validPlayersCount} لاعب):</p>
+                         <div class="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto players-scroll p-1">${ratingsHtml}</div>
+                    </div>
+                    <div class="bg-black/20 p-4 rounded-2xl text-right text-xs text-gray-300 border border-white/5 italic">"${data.note || "تشكيلة رائعة."}"</div>
                 </div>`;
             } catch (e) {
                 reportContent.innerHTML = `<div class="bg-red-900/40 border border-red-500 p-5 rounded-xl text-red-400 text-xs text-center">${e.message}</div>`;
