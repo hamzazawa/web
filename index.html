@@ -35,7 +35,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +5 🚀 (النسخة الذكية)</span>
+            <span>ابدأ التحليل +6 🚀 (النسخة الخارقة)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -79,28 +79,41 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري تحليل الصورة...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري استخراج الأرقام...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-gray-400 p-5 text-center'>البوت يقرأ الأرقام ويقيم البطاقات... انتظر قليلاً.</p>";
+            reportContent.innerHTML = "<p class='text-gray-400 p-5 text-center'>نبحث عن الموديل المتوافق ونقرأ الصورة... لحظات.</p>";
 
             const base64Data = preview.src.split(',')[1];
 
             try {
-                // استخدام gemini-1.5-pro لأنه الأقوى في قراءة النصوص من الصور (OCR)
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${KEY}`;
+                // 1. محرك البحث الذكي عن الموديلات (استعدناه من النسخة 3)
+                const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
+                const modelsData = await modelsRes.json();
                 
-                // الأوامر الصارمة للبوت (Prompt Engineering)
+                if (!modelsRes.ok) {
+                    reportContent.innerHTML = `<p class='text-red-400 p-5'>خطأ في المفتاح: ${modelsData.error?.message}</p>`;
+                    return;
+                }
+
+                const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                
+                let targetModel = validModels.find(m => m.name.includes("flash"));
+                if (!targetModel) targetModel = validModels.find(m => m.name.includes("pro"));
+
+                if (!targetModel) {
+                    reportContent.innerHTML = "<p class='text-red-400 p-5'>لم نجد موديل يدعم الصور في حسابك.</p>";
+                    return;
+                }
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
+                
+                // 2. هندسة الأوامر لاستخراج JSON الدقيق
                 const promptText = `
-                أنت خبير eFootball. انظر للصورة المرفقة واستخرج منها البيانات التالية بدقة:
-                1. القوة الجماعية (Collective Strength) المكتوبة باللون الأصفر.
-                2. قدر سعر الحساب بالدرهم المغربي (رقم تقريبي بناءً على اللاعبين).
-                3. ملاحظة فنية عن التشكيلة.
-                
-                يجب أن يكون ردك حصرياً بصيغة JSON فقط، بدون أي كلام إضافي، بهذا الشكل:
+                أنت خبير ألعاب eFootball. استخرج البيانات التالية من الصورة بدقة، وأرجعها بصيغة JSON حصراً بدون أي نصوص أخرى:
                 {
-                    "strength": "رقم القوة هنا",
-                    "price": "السعر المتوقع هنا",
-                    "note": "ملاحظتك هنا"
+                    "strength": "رقم القوة الجماعية (Collective Strength) الموجود في الصورة تحت شعار الفريق",
+                    "price": "قدر سعر الحساب بالدرهم المغربي بناءً على اللاعبين (مثال: 1500 - 2500)",
+                    "note": "ملاحظة تكتيكية سريعة جداً للمدرب"
                 }`;
 
                 const response = await fetch(url, {
@@ -118,21 +131,25 @@
 
                 const result = await response.json();
 
+                if (!response.ok) {
+                    reportContent.innerHTML = `<p class='text-red-400 p-5'>خطأ أثناء التحليل: ${result.error?.message}</p>`;
+                    return;
+                }
+
                 if (result.candidates && result.candidates[0].content) {
                     let aiText = result.candidates[0].content.parts[0].text;
                     
-                    // تنظيف الرد من أي علامات Markdown لضمان عمل JSON
+                    // تنظيف كود الـ JSON
                     aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
                     
                     let parsedData;
                     try {
                         parsedData = JSON.parse(aiText);
                     } catch (e) {
-                        // في حال أخطأ البوت ولم يرسل JSON
-                        parsedData = { strength: "تعذر القراءة", price: "غير محدد", note: aiText };
+                        parsedData = { strength: "لم يتعرف عليه", price: "غير محدد", note: "تعذر تحليل الملاحظة بسبب تنسيق الرد: " + aiText };
                     }
 
-                    // وضع البيانات الحقيقية داخل التصميم!
+                    // 3. بناء الواجهة بالأرقام الحقيقية
                     const responseHtml = `
                     <div class="glass rounded-2xl p-6 border-l-4 border-yellow-500 animate-fade-in-up text-center max-w-lg mx-auto">
                         <div class="flex items-center justify-center gap-2 mb-5">
@@ -148,8 +165,8 @@
                         <div class="bg-gray-800/50 rounded-xl p-5 mb-5 border border-gray-700/50">
                             <p class="text-gray-400 text-sm">السعر المتوقع للحساب</p>
                             <h4 class="text-4xl font-bold text-yellow-500 mt-1 flex justify-center items-end gap-1">
-                                <span class="text-5xl font-black">${parsedData.price}</span>
-                                <span class="text-2xl font-normal text-gray-300 ml-1">د.م</span>
+                                <span class="text-4xl font-black">${parsedData.price}</span>
+                                <span class="text-xl font-normal text-gray-300 ml-1">د.م</span>
                             </h4>
                         </div>
 
@@ -166,13 +183,13 @@
                     `;
                     reportContent.innerHTML = responseHtml;
                 } else {
-                    reportContent.innerHTML = "<p class='text-red-400 p-5 text-center'>البوت لم يتمكن من رؤية الصورة بوضوح.</p>";
+                    reportContent.innerHTML = "<p class='text-red-400 p-5 text-center'>البوت قرأ الصورة لكن لم يرجع بيانات مفيدة.</p>";
                 }
             } catch (error) {
-                reportContent.innerHTML = "<p class='text-red-400 p-5 text-center'>حدث خطأ في الاتصال بالخادم.</p>";
+                reportContent.innerHTML = `<p class='text-red-400 p-5 text-center'>حدث خطأ: ${error.message}</p>`;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +5 🚀';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +6 🚀 (النسخة الخارقة)';
             }
         };
     </script>
