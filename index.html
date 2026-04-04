@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -36,7 +37,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +8 🚀 (النسخة المستقرة)</span>
+            <span>ابدأ التحليل +9 🚀</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -73,10 +74,8 @@
             }
         };
 
-        // خوارزمية التثمين الذكية
         function calculateDynamicPrice(strengthString) {
-            // تنظيف الرقم من أي نصوص أو فواصل قد يرسلها البوت
-            let s = parseInt(strengthString.replace(/\\D/g, ''));
+            let s = parseInt(strengthString.replace(/\D/g, ''));
             if (isNaN(s)) return { price: "???", dollar: "غير محدد" };
 
             let base = 0;
@@ -93,7 +92,6 @@
             else if (s < 3250) { base = 520; dollarEquivalent = "(52$)"; }
             else { base = 650; dollarEquivalent = "(65$)"; }
 
-            // التلاعب بالأرقام قليلاً لتبدو واقعية
             let jitter = Math.floor(Math.random() * 17) - 4; 
             return { price: base + jitter, dollar: dollarEquivalent };
         }
@@ -103,39 +101,23 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري فحص الشبكة...';
+            analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري المعالجة...';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = "<p class='text-gray-400 p-5 text-center'>البوت يقرأ بيانات التشكيلة حالياً... انتظر قليلاً.</p>";
+            reportContent.innerHTML = "<p class='text-gray-400 p-5 text-center'>البوت يقوم بتقييم الحساب حالياً...</p>";
 
             const base64Data = preview.src.split(',')[1];
 
             try {
-                // 1. استعادة محرك البحث الذكي (لكي لا يعلق الموقع)
-                const modelsRes = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models?key=\${KEY}\`);
+                const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
                 const modelsData = await modelsRes.json();
                 
-                if (!modelsRes.ok) {
-                    reportContent.innerHTML = \`<p class='text-red-400 p-5 text-center'>خطأ في المفتاح: \${modelsData.error?.message}</p>\`;
-                    return;
-                }
-
                 const validModels = modelsData.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
                 let targetModel = validModels.find(m => m.name.includes("flash"));
                 if (!targetModel) targetModel = validModels.find(m => m.name.includes("pro"));
 
-                if (!targetModel) {
-                    reportContent.innerHTML = "<p class='text-red-400 p-5 text-center'>لم نجد موديل يدعم الصور في حسابك.</p>";
-                    return;
-                }
-
-                analyzeBtn.innerHTML = '<div class="loader w-5 h-5 border-2 rounded-full"></div> جاري التقييم المالي...';
-
-                // 2. طلب التحليل من الموديل الصحيح
-                const url = \`https://generativelanguage.googleapis.com/v1beta/\${targetModel.name}:generateContent?key=\${KEY}\`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
                 
-                const promptText = \`
-                Extract eFootball Collective Strength from image. Respond ONLY in strict JSON format:
-                {"strength": "number only", "note": "Short technical note in Arabic"}\`;
+                const promptText = `Extract eFootball Collective Strength from image. Respond ONLY in strict JSON format: {"strength": "number only", "note": "Short technical note in Arabic"}`;
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -152,62 +134,41 @@
 
                 const result = await response.json();
 
-                if (!response.ok) {
-                    reportContent.innerHTML = \`<p class='text-red-400 p-5 text-center'>فشل الاتصال: \${result.error?.message}</p>\`;
-                    return;
-                }
-
                 if (result.candidates && result.candidates[0].content) {
-                    let aiText = result.candidates[0].content.parts[0].text.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-                    
-                    let parsedData;
-                    try {
-                        parsedData = JSON.parse(aiText);
-                    } catch (e) {
-                        reportContent.innerHTML = \`<p class='text-red-400 p-5 text-center'>خطأ في قراءة البيانات: \${aiText}</p>\`;
-                        return;
-                    }
-                    
-                    // حساب السعر بخوارزميتك
+                    let aiText = result.candidates[0].content.parts[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+                    let parsedData = JSON.parse(aiText);
                     let valuation = calculateDynamicPrice(parsedData.strength);
 
-                    const responseHtml = \`
-                    <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl max-w-md mx-auto">
+                    reportContent.innerHTML = `
+                    <div class="glass rounded-3xl p-6 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl max-w-md mx-auto text-center">
                         <div class="mb-6">
-                            <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">DOOMN Verified</span>
+                            <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase">DOOMN Verified</span>
                         </div>
-
                         <div class="space-y-6">
                             <div>
                                 <p class="text-gray-400 text-xs mb-1">قوة التشكيلة</p>
-                                <h4 class="text-6xl font-black text-white tracking-tighter">\${parsedData.strength}</h4>
+                                <h4 class="text-6xl font-black text-white tracking-tighter">${parsedData.strength}</h4>
                             </div>
-
                             <div class="pt-4 border-t border-white/10">
                                 <p class="text-gray-400 text-xs mb-1">السعر التقديري في السوق</p>
                                 <div class="flex items-baseline justify-center gap-2">
-                                    <h4 class="text-5xl font-black price-gradient tracking-tight">\${valuation.price}</h4>
+                                    <h4 class="text-5xl font-black price-gradient tracking-tight">${valuation.price}</h4>
                                     <span class="text-xl font-bold text-gray-300 italic">د.م</span>
                                 </div>
-                                <p class="text-blue-400 text-[10px] mt-1 font-bold">\${valuation.dollar}</p>
+                                <p class="text-blue-400 text-[10px] mt-1 font-bold">${valuation.dollar}</p>
                             </div>
-
                             <div class="bg-black/20 rounded-2xl p-4 text-right border border-white/5">
                                 <p class="text-gray-500 text-[10px] mb-1">توصية المهندس آلي</p>
-                                <p class="text-gray-300 text-sm leading-relaxed">\${parsedData.note}</p>
+                                <p class="text-gray-300 text-sm leading-relaxed">${parsedData.note}</p>
                             </div>
                         </div>
-                    </div>
-                    \`;
-                    reportContent.innerHTML = responseHtml;
-                } else {
-                    reportContent.innerHTML = "<p class='text-red-400 text-center p-5'>البوت لم يتمكن من استخراج الأرقام بوضوح.</p>";
+                    </div>`;
                 }
             } catch (error) {
-                reportContent.innerHTML = \`<p class='text-red-400 text-center p-5'>حدث خطأ تقني: \${error.message}</p>\`;
+                reportContent.innerHTML = `<p class='text-red-400 text-center p-5'>حدث خطأ: ${error.message}</p>`;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +8 🚀 (النسخة المستقرة)';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +9 🚀';
             }
         };
     </script>
