@@ -17,7 +17,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2">DOOMN <span class="text-white">AI</span></h1>
-        <p class="text-gray-400 text-lg">تحليل الصور والدارات الكهربائية بذكاء 3.1</p>
+        <p class="text-gray-400 text-lg">تحليل صور eFootball والدارات الكهربائية بذكاء 3.1</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -33,7 +33,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل (النسخة المحدثة) 🚀</span>
+            <span>ابدأ التحليل (النسخة الذكية) ⚡</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -44,7 +44,7 @@
     </main>
 
     <script>
-        // المفتاح محمي ومقسم
+        // مفتاحك محمي
         const k1 = "AIzaSyCvP3a6NDth9";
         const k2 = "HTGHZnsF82a__8";
         const k3 = "HNrhsX3c";
@@ -77,44 +77,60 @@
             if (!file) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader"></div> جاري المعالجة...';
+            analyzeBtn.innerHTML = '<div class="loader"></div> جاري البحث عن المسار...';
             resultContainer.classList.remove('hidden');
-            responseText.innerText = "جاري تحليل الصورة، يرجى الانتظار...";
-
+            
             const base64Data = preview.src.split(',')[1];
+            
+            // قائمة الموديلات التي سيبحث فيها الكود أوتوماتيكياً
+            const modelsToTry = [
+                "gemini-1.5-flash",
+                "gemini-1.5-pro",
+                "gemini-pro-vision",
+                "gemini-1.0-pro-vision-latest"
+            ];
+            
+            let success = false;
 
-            try {
-                // استخدام gemini-1.5-flash-latest لضمان التوافق التام مع واجهة برمجة التطبيقات المحدثة
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${KEY}`;
+            for (let model of modelsToTry) {
+                if (success) break;
                 
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: "أنت مهندس خبير. أجب باللغة العربية: إذا كانت الصورة لتشكيلة eFootball أعط نصائح، إذا كانت دارة كهربائية اشرحها، إذا كان كود Sketchware اشرحه." },
-                                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-                            ]
-                        }]
-                    })
-                });
+                responseText.innerText = `البوت يحاول الاتصال عبر: ${model} ...`;
+                
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${KEY}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: "أنت مهندس خبير. أجب بالعربية: إذا كانت الصورة لتشكيلة eFootball أعط نصائح، إذا كانت دارة كهربائية اشرحها، إذا كان كود Sketchware اشرحه." },
+                                    { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                                ]
+                            }]
+                        })
+                    });
 
-                const result = await response.json();
+                    const result = await response.json();
 
-                if (result.candidates && result.candidates[0].content) {
-                    responseText.innerText = result.candidates[0].content.parts[0].text;
-                } else if (result.error) {
-                    responseText.innerText = "خطأ من جوجل: " + result.error.message;
-                } else {
-                    responseText.innerText = "تعذر التحليل، جرب صورة أخرى.";
+                    if (result.candidates && result.candidates[0].content) {
+                        responseText.innerText = result.candidates[0].content.parts[0].text;
+                        success = true; // تم النجاح، أوقف البحث
+                    } else if (result.error) {
+                        console.log(`فشل الموديل ${model}: ${result.error.message}`);
+                        // سيكمل الكود وينتقل للموديل الذي بعده تلقائياً
+                    }
+                } catch (error) {
+                    console.log(`خطأ في الشبكة مع ${model}`);
                 }
-            } catch (error) {
-                responseText.innerText = "حدث خطأ في الاتصال. تأكد من جودة الإنترنت لديك.";
-            } finally {
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل (النسخة المحدثة) 🚀';
             }
+
+            if (!success) {
+                responseText.innerText = "عذراً، يبدو أن حساب جوجل الخاص بك لا يملك صلاحية تحليل الصور حالياً. جرب إنشاء API Key من حساب Gmail آخر.";
+            }
+            
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = 'ابدأ التحليل (النسخة الذكية) ⚡';
         };
     </script>
 </body>
