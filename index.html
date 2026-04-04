@@ -17,7 +17,7 @@
 
     <header class="w-full max-w-2xl text-center my-10">
         <h1 class="text-5xl font-extrabold text-blue-500 mb-2">DOOMN <span class="text-white">AI</span></h1>
-        <p class="text-gray-400 text-lg">تحليل صور eFootball والدارات الكهربائية بذكاء 3.1</p>
+        <p class="text-gray-400 text-lg">تحليل صور eFootball والدارات الكهربائية بذكاء</p>
     </header>
 
     <main class="w-full max-w-2xl glass rounded-3xl p-8 shadow-2xl">
@@ -33,7 +33,7 @@
         </div>
 
         <button id="analyze-btn" class="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-            <span>ابدأ التحليل +1 🚀</span>
+            <span>ابدأ التحليل +2 🚀 (الفحص الذاتي)</span>
         </button>
 
         <div id="result-container" class="mt-8 hidden">
@@ -44,7 +44,7 @@
     </main>
 
     <script>
-        // المفتاح الخاص بك مقسم
+        // المفتاح الخاص بك (مقسم لتجنب حظر GitHub)
         const k1 = "AIzaSyCvP3a6NDth9";
         const k2 = "HTGHZnsF82a__8";
         const k3 = "HNrhsX3c";
@@ -79,12 +79,39 @@
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<div class="loader"></div> جاري الفحص...';
             resultContainer.classList.remove('hidden');
-            responseText.innerText = "يتم الآن إرسال الطلب، يرجى الانتظار...";
+            responseText.innerText = "1. جاري الاتصال بجوجل لمعرفة الموديلات المتاحة في حسابك...";
 
             const base64Data = preview.src.split(',')[1];
 
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`;
+                // الخطوة الأولى: جلب قائمة الموديلات المسموح بها لهذا المفتاح
+                const modelsRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${KEY}`);
+                const modelsData = await modelsRes.json();
+                
+                if (!modelsRes.ok) {
+                    responseText.innerText = `[خطأ في جلب الموديلات]\n${JSON.stringify(modelsData)}`;
+                    return;
+                }
+
+                // فلترة الموديلات التي تدعم توليد المحتوى
+                const validModels = modelsData.models.filter(m => 
+                    m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent")
+                );
+
+                // اختيار أفضل موديل متاح (نبحث عن flash ثم pro ثم vision)
+                let targetModel = validModels.find(m => m.name.includes("flash"));
+                if (!targetModel) targetModel = validModels.find(m => m.name.includes("pro-vision"));
+                if (!targetModel) targetModel = validModels.find(m => m.name.includes("pro"));
+                
+                if (!targetModel) {
+                    responseText.innerText = "لم نجد أي موديل يدعم التحليل في حسابك.\nالموديلات الموجودة:\n" + validModels.map(m => m.name).join('\n');
+                    return;
+                }
+
+                responseText.innerText = `2. تم العثور على موديل يعمل: ${targetModel.name}\nجاري تحليل الصورة الآن...`;
+
+                // الخطوة الثانية: إرسال الصورة للموديل الذي وجدناه يعمل!
+                const url = `https://generativelanguage.googleapis.com/v1beta/${targetModel.name}:generateContent?key=${KEY}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -92,7 +119,7 @@
                     body: JSON.stringify({
                         contents: [{
                             parts: [
-                                { text: "أجب باللغة العربية. أنت مهندس خبير. حلل الصورة بدقة: إذا كانت لتشكيلة eFootball أعط نصائح، وإذا كانت دارة كهربائية اشرحها." },
+                                { text: "أنت مهندس تقني وخبير ألعاب. أجب بالعربية. حلل الصورة: إذا كانت تشكيلة eFootball قدم نصائح للمدرب، وإذا كانت دارة كهربائية اشرحها كمهندس." },
                                 { inline_data: { mime_type: "image/jpeg", data: base64Data } }
                             ]
                         }]
@@ -102,26 +129,22 @@
                 const httpStatus = response.status;
                 const result = await response.json();
 
-                // طباعة الخطأ الدقيق إذا كانت الاستجابة غير ناجحة
                 if (!response.ok) {
-                    responseText.innerText = `[تفاصيل الخطأ الدقيقة من جوجل]\nكود HTTP: ${httpStatus}\nحالة الخطأ: ${result.error?.status || 'غير معروف'}\nالرسالة بضبط:\n${result.error?.message || JSON.stringify(result)}`;
+                    responseText.innerText = `[خطأ أثناء التحليل باستخدام ${targetModel.name}]\nكود: ${httpStatus}\nالرسالة:\n${result.error?.message || JSON.stringify(result)}`;
                     return;
                 }
 
                 if (result.candidates && result.candidates[0].content) {
-                    // نجاح التحليل
-                    responseText.classList.remove('font-mono', 'text-sm'); // إزالة خط الأكواد للرد العادي
+                    responseText.classList.remove('font-mono', 'text-sm');
                     responseText.innerText = result.candidates[0].content.parts[0].text;
                 } else {
-                    // رد غير متوقع من جوجل
-                    responseText.innerText = "[رد فارغ أو غير متوقع من جوجل]\n" + JSON.stringify(result, null, 2);
+                    responseText.innerText = "[رد غير مفهوم من جوجل]\n" + JSON.stringify(result, null, 2);
                 }
             } catch (error) {
-                // أخطاء المتصفح أو انقطاع الإنترنت
-                responseText.innerText = "[خطأ في المتصفح أو الشبكة]\n" + error.message;
+                responseText.innerText = "[خطأ في الشبكة أو المتصفح]\n" + error.message;
             } finally {
                 analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = 'ابدأ التحليل +1 🚀';
+                analyzeBtn.innerHTML = 'ابدأ التحليل +2 🚀';
             }
         };
     </script>
