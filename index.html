@@ -75,14 +75,9 @@
     </footer>
 
     <script>
-        // 🔥 مصفوفة المفاتيح: المفاتيح الجديدة الفعالة فقط 🔥
-        const GROQ_API_KEYS = [
-            "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",
-            "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"
-        ];
+        // 🔥 المفتاح المدفوع الخاص بك (سريع ومستقر) 🔥
+        const API_KEY = "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";
         
-        let currentKeyIndex = 0; // متغير يتتبع المفتاح النشط حالياً
-
         const fileInput = document.getElementById('file-input');
         const preview = document.getElementById('preview');
         const analyzeBtn = document.getElementById('analyze-btn');
@@ -187,18 +182,12 @@
 
             const base64Image = preview.src;
 
-            // دالة الاتصال المدمجة بنظام الدوران التلقائي للهروب من الحد المجاني
-            async function fetchWithRotation(retryCount = 0) {
-                if (retryCount >= GROQ_API_KEYS.length) {
-                    throw new Error("⚠️ عذراً، جميع خوادمنا مشغولة حالياً لضغط الاستخدام. يرجى العودة والمحاولة لاحقاً!");
-                }
-
-                const activeKey = GROQ_API_KEYS[currentKeyIndex];
-
+            try {
+                // اتصال مباشر بدون تعقيدات الدوران
                 const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${activeKey}`,
+                        'Authorization': `Bearer ${API_KEY}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -215,20 +204,8 @@
                     })
                 });
 
-                // إذا انتهى رصيد المفتاح الحالي، انتقل للمفتاح التالي وحاول مجدداً فوراً
-                if (response.status === 429 || response.status === 402) {
-                    console.warn(`المفتاح رقم ${currentKeyIndex + 1} استُهلك. الانتقال للمفتاح التالي...`);
-                    currentKeyIndex = (currentKeyIndex + 1) % GROQ_API_KEYS.length;
-                    return fetchWithRotation(retryCount + 1);
-                }
-
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.error?.message || "Error");
-                return result;
-            }
-
-            try {
-                const result = await fetchWithRotation();
+                if (!response.ok) throw new Error(result.error?.message || "حدث خطأ غير متوقع في الخادم.");
 
                 let aiText = result.choices[0].message.content;
                 let jsonString = aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1);
