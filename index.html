@@ -151,7 +151,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo",
+                        // 🔥 هذا هو الموديل الصحيح والموفر على السيرفرات العامة 🔥
+                        model: "meta-llama/Llama-Vision-Free",
                         messages: [{
                             role: "user",
                             content: [
@@ -159,16 +160,25 @@
                                 { type: "image_url", image_url: { url: preview.src } }
                             ]
                         }],
-                        max_tokens: 300 // تحديد التوكنز لتقليل الاستهلاك
+                        max_tokens: 300 // الحد من الاستهلاك للحفاظ على الرصيد
                     })
                 });
 
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.error?.message || "Error");
+                if (!response.ok) throw new Error(result.error?.message || "حدث خطأ غير متوقع.");
 
                 let aiText = result.choices[0].message.content;
-                let data = JSON.parse(aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1));
                 
+                let jsonString = aiText;
+                let startIndex = aiText.indexOf('{');
+                let endIndex = aiText.lastIndexOf('}');
+                if (startIndex !== -1 && endIndex !== -1) {
+                    jsonString = aiText.substring(startIndex, endIndex + 1);
+                } else {
+                    throw new Error("حدث خطأ في استخراج البيانات من السيرفر. الرد: " + aiText);
+                }
+                
+                let data = JSON.parse(jsonString);
                 let strength = parseInt(data.strength) || 0;
                 let playersTotalMAD = 0;
                 let ratingsHtml = '';
@@ -187,7 +197,7 @@
                     });
                 }
 
-                if (validPlayersArray.length < 15) throw new Error(`⚠️ لم نجد عدداً كافياً من اللاعبين. ارفع صورة أوضح.`);
+                if (validPlayersArray.length < 15) throw new Error(`⚠️ تم مسح ${validPlayersArray.length} لاعب فقط. يرجى رفع صورة واضحة.`);
 
                 let isPremium = (strength > 3219 || highTierCount > 4);
                 validPlayersArray.forEach(rNum => {
