@@ -47,7 +47,7 @@
                     <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                 </div>
                 <p class="text-gray-200 font-bold text-lg">اضغط لرفع صورة التشكيلة</p>
-                <p class="text-xs text-gray-500 mt-2">يتم ضغط الصورة تلقائياً لتسريع الفحص</p>
+                <p class="text-xs text-gray-500 mt-2">مسموح بفحصين (2) لكل ساعة</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-2xl shadow-2xl mx-auto z-10">
         </div>
@@ -76,6 +76,34 @@
         const currencySelector = document.getElementById('currency-selector');
 
         let compressedBase64 = "";
+
+        // 🔥 نظام إدارة حصص الفحص (حماية الرصيد) 🔥
+        const MAX_SCANS = 2; // عدد الفحوصات المسموحة
+        const TIME_LIMIT_MS = 60 * 60 * 1000; // 60 دقيقة بالملي ثانية
+
+        function checkRateLimit() {
+            let scans = JSON.parse(localStorage.getItem('doom_ai_scans')) || [];
+            const now = Date.now();
+            
+            // إزالة الفحوصات القديمة التي مر عليها أكثر من ساعة
+            scans = scans.filter(time => now - time < TIME_LIMIT_MS);
+            localStorage.setItem('doom_ai_scans', JSON.stringify(scans));
+            
+            if (scans.length >= MAX_SCANS) {
+                // حساب الدقائق المتبقية لفك الحظر
+                const nextAvailableTime = scans[0] + TIME_LIMIT_MS;
+                const minutesLeft = Math.ceil((nextAvailableTime - now) / (60 * 1000));
+                return { allowed: false, minutesLeft: minutesLeft };
+            }
+            return { allowed: true };
+        }
+
+        function recordScan() {
+            let scans = JSON.parse(localStorage.getItem('doom_ai_scans')) || [];
+            scans.push(Date.now());
+            localStorage.setItem('doom_ai_scans', JSON.stringify(scans));
+        }
+        // ---------------------------------------------
 
         document.getElementById('drop-area').onclick = () => fileInput.click();
 
@@ -162,6 +190,21 @@
         analyzeBtn.onclick = async () => {
             if (!compressedBase64) return;
 
+            // التحقق من الحصة قبل إرسال الطلب
+            const rateLimit = checkRateLimit();
+            if (!rateLimit.allowed) {
+                resultContainer.classList.remove('hidden');
+                reportContent.innerHTML = `
+                <div class="bg-yellow-900/40 border border-yellow-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
+                    <div class="text-yellow-400 mb-3">
+                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p class='text-white font-bold text-lg mb-2'>لقد استنفدت الحد المسموح به! ⚠️</p>
+                    <p class='text-yellow-200 text-sm leading-relaxed'>للحفاظ على جودة الخدمة، يُسمح بفحص صورتين فقط كل ساعة. يرجى العودة بعد <span class="font-bold text-white bg-yellow-600/50 px-2 py-1 rounded">${rateLimit.minutesLeft} دقيقة</span> والمحاولة مجدداً.</p>
+                </div>`;
+                return;
+            }
+
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<div class="loader"></div> <span class="mr-2">جاري تحليل البيانات...</span>';
             resultContainer.classList.remove('hidden');
@@ -229,9 +272,12 @@
                 let finalPriceMAD = playersTotalMAD + bonusMAD + (Math.floor(Math.random() * 3) - 1);
                 if (finalPriceMAD < 0) finalPriceMAD = 0;
 
+                // تسجيل الفحص الناجح في التخزين المحلي
+                recordScan();
+
                 reportContent.innerHTML = `
                 <div class="glass rounded-[2rem] p-6 sm:p-8 border-t-4 border-blue-500 animate-fade-in-up">
-                    <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
                         <div class="bg-gradient-to-br from-blue-900/40 to-transparent p-5 rounded-2xl border border-blue-500/30 text-center relative overflow-hidden flex flex-col justify-center">
                             <div class="absolute -right-4 -top-4 w-12 h-12 bg-blue-500/20 rounded-full blur-xl"></div>
                             <p class="text-gray-400 text-[11px] mb-1 font-bold">القوة الجماعية</p>
@@ -258,7 +304,6 @@
                     </div>
                 </div>`;
             } catch (e) {
-                // 🔥 رسالة الخطأ الودية والاحترافية الجديدة 🔥
                 reportContent.innerHTML = `
                 <div class="bg-red-900/40 border border-red-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
                     <div class="text-red-400 mb-3">
