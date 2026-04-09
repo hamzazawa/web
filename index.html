@@ -75,6 +75,7 @@
     </footer>
 
     <script>
+        // 🔥 المفتاح المدفوع الخاص بك 🔥
         const API_KEY = "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";
         
         const fileInput = document.getElementById('file-input');
@@ -203,11 +204,29 @@
                 });
 
                 const result = await response.json();
-                if (!response.ok) throw new Error(result.error?.message || "حدث خطأ غير متوقع في الخادم.");
+                
+                // صيد الأخطاء من السيرفر مباشرة
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ` + (result.error?.message || JSON.stringify(result)));
+                }
 
                 let aiText = result.choices[0].message.content;
-                let jsonString = aiText.substring(aiText.indexOf('{'), aiText.lastIndexOf('}') + 1);
-                let data = JSON.parse(jsonString);
+                let jsonString = aiText;
+                
+                let startIndex = aiText.indexOf('{');
+                let endIndex = aiText.lastIndexOf('}');
+                if (startIndex !== -1 && endIndex !== -1) {
+                    jsonString = aiText.substring(startIndex, endIndex + 1);
+                } else {
+                    throw new Error("الموديل لم يرجع بيانات بصيغة JSON. الرد الخام: " + aiText);
+                }
+
+                let data;
+                try {
+                    data = JSON.parse(jsonString);
+                } catch(e) {
+                    throw new Error("فشل في قراءة الـ JSON. الرد كان: " + jsonString);
+                }
                 
                 let strength = parseInt(data.strength) || 0;
                 let playersTotalMAD = 0;
@@ -268,22 +287,16 @@
                 reportContent.innerHTML = `
                 <div class="glass rounded-[2rem] p-6 sm:p-8 border-t-4 border-blue-500 animate-fade-in-up shadow-2xl">
                     <div class="grid grid-cols-2 gap-4 mb-6">
-                        <div class="bg-gradient-to-br from-blue-900/40 to-blue-800/10 p-5 rounded-2xl border border-blue-500/30 text-center relative overflow-hidden flex flex-col items-center justify-center">
+                        <div class="bg-gradient-to-br from-blue-900/40 to-blue-800/10 p-5 rounded-2xl border border-blue-500/30 text-center relative overflow-hidden">
                             <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/20 rounded-full blur-xl"></div>
                             <p class="text-gray-400 text-[11px] mb-1 font-bold">القوة الجماعية</p>
                             <h4 class="text-4xl font-black text-blue-400 tracking-tighter drop-shadow-md">${strength}</h4>
                         </div>
-                        
-                        <div class="bg-gradient-to-br from-yellow-900/40 to-orange-800/10 p-5 rounded-2xl border border-yellow-500/30 text-center relative overflow-hidden flex flex-col items-center justify-center">
+                        <div class="bg-gradient-to-br from-yellow-900/40 to-orange-800/10 p-5 rounded-2xl border border-yellow-500/30 text-center relative overflow-hidden">
                             <div class="absolute -left-4 -top-4 w-16 h-16 bg-yellow-500/20 rounded-full blur-xl"></div>
                             <p class="text-gray-400 text-[11px] mb-1 font-bold">السعر التقديري</p>
                             <h4 class="text-3xl font-black text-yellow-400 tracking-tighter drop-shadow-md" dir="ltr">${finalDisplayPrice}</h4>
-                            ${bonusMAD > 0 ? `<p class="text-green-400 text-[10px] font-bold mt-1 bg-green-400/10 inline-block px-2 rounded-md mb-2">+${bonusDisplayPrice} علاوة</p>` : ''}
-                            
-                            <a href="https://chat.whatsapp.com/K3grvsiRO5WJ39SzFbSPck?mode=gi_t" target="_blank" class="mt-3 flex items-center justify-center gap-2 w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-black text-sm py-2 px-3 rounded-xl shadow-[0_5px_15px_rgba(34,197,94,0.3)] hover:shadow-[0_8px_20px_rgba(34,197,94,0.5)] transition-all transform hover:-translate-y-0.5 z-10">
-                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                                بيع الحساب
-                            </a>
+                            ${bonusMAD > 0 ? `<p class="text-green-400 text-[10px] font-bold mt-1 bg-green-400/10 inline-block px-2 rounded-md">+${bonusDisplayPrice} علاوة</p>` : ''}
                         </div>
                     </div>
 
@@ -305,11 +318,11 @@
                 </div>`;
             } catch (e) {
                 reportContent.innerHTML = `
-                <div class="bg-red-900/30 border border-red-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
-                    <div class="text-red-400 mb-3"><svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
-                    <p class='text-red-300 font-bold text-sm leading-relaxed'>${e.message.includes('⚠️') ? e.message : 'عذراً، حدث خطأ في معالجة الصورة. يرجى المحاولة مرة أخرى لاحقاً.'}</p>
+                <div class="bg-red-900/40 border border-red-500 p-4 rounded-xl text-right animate-fade-in-up">
+                    <p class='text-red-400 font-bold mb-2 text-sm'>${e.message.includes('⚠️') ? e.message : '❌ سجل الأخطاء (Developer Log):'}</p>
+                    ${!e.message.includes('⚠️') ? `<div class='bg-black p-3 rounded-lg overflow-x-auto text-left' dir="ltr"><code class='text-green-400 text-xs font-mono whitespace-pre-wrap break-words'>${e.message}</code></div>` : ''}
                 </div>`;
-                if (!e.message.includes('⚠️')) console.error(e);
+                console.error(e);
             } finally {
                 analyzeBtn.disabled = false;
                 analyzeBtn.innerHTML = '<span>فحص تشكيلة أخرى 🚀</span>';
