@@ -47,7 +47,7 @@
                     <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                 </div>
                 <p class="text-gray-200 font-bold text-lg">اضغط لرفع صورة التشكيلة</p>
-                <p class="text-xs text-gray-500 mt-2">مسموح بفحصين (2) لكل ساعة</p>
+                <p class="text-xs text-gray-500 mt-2">يتم ضغط الصورة تلقائياً لتسريع الفحص</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-2xl shadow-2xl mx-auto z-10">
         </div>
@@ -76,24 +76,22 @@
         const currencySelector = document.getElementById('currency-selector');
 
         let compressedBase64 = "";
+        let countdownInterval; // متغير لحفظ العداد لإيقافه عند الحاجة
 
-        // 🔥 نظام إدارة حصص الفحص (حماية الرصيد) 🔥
-        const MAX_SCANS = 2; // عدد الفحوصات المسموحة
-        const TIME_LIMIT_MS = 60 * 60 * 1000; // 60 دقيقة بالملي ثانية
+        // 🔥 نظام الحماية 2 فحوصات في الساعة 🔥
+        const MAX_SCANS = 2; 
+        const TIME_LIMIT_MS = 60 * 60 * 1000; 
 
         function checkRateLimit() {
             let scans = JSON.parse(localStorage.getItem('doom_ai_scans')) || [];
             const now = Date.now();
             
-            // إزالة الفحوصات القديمة التي مر عليها أكثر من ساعة
             scans = scans.filter(time => now - time < TIME_LIMIT_MS);
             localStorage.setItem('doom_ai_scans', JSON.stringify(scans));
             
             if (scans.length >= MAX_SCANS) {
-                // حساب الدقائق المتبقية لفك الحظر
                 const nextAvailableTime = scans[0] + TIME_LIMIT_MS;
-                const minutesLeft = Math.ceil((nextAvailableTime - now) / (60 * 1000));
-                return { allowed: false, minutesLeft: minutesLeft };
+                return { allowed: false, nextAvailableTime: nextAvailableTime };
             }
             return { allowed: true };
         }
@@ -189,19 +187,54 @@
 
         analyzeBtn.onclick = async () => {
             if (!compressedBase64) return;
+            
+            // إيقاف العداد القديم إذا كان يعمل
+            if(countdownInterval) clearInterval(countdownInterval);
 
             // التحقق من الحصة قبل إرسال الطلب
             const rateLimit = checkRateLimit();
             if (!rateLimit.allowed) {
                 resultContainer.classList.remove('hidden');
+                
+                // 🔥 واجهة الحظر مع العداد الحي وزر البيع 🔥
                 reportContent.innerHTML = `
-                <div class="bg-yellow-900/40 border border-yellow-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
+                <div class="bg-yellow-900/30 border border-yellow-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
                     <div class="text-yellow-400 mb-3">
                         <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
-                    <p class='text-white font-bold text-lg mb-2'>لقد استنفدت الحد المسموح به! ⚠️</p>
-                    <p class='text-yellow-200 text-sm leading-relaxed'>للحفاظ على جودة الخدمة، يُسمح بفحص صورتين فقط كل ساعة. يرجى العودة بعد <span class="font-bold text-white bg-yellow-600/50 px-2 py-1 rounded">${rateLimit.minutesLeft} دقيقة</span> والمحاولة مجدداً.</p>
+                    <p class='text-white font-bold text-xl mb-2'>لقد استنفدت الحد المسموح به! ⚠️</p>
+                    <p class='text-yellow-200 text-sm leading-relaxed mb-4'>للحفاظ على جودة الخدمة، يُسمح بفحص صورتين فقط كل ساعة. يرجى العودة بعد:</p>
+                    
+                    <div class="bg-black/40 rounded-xl py-3 px-6 inline-block mb-6 border border-yellow-500/20 shadow-inner">
+                        <span id="countdown-timer" class="text-4xl font-black text-yellow-400 tracking-wider" dir="ltr">--:--</span>
+                    </div>
+
+                    <div class="border-t border-gray-700/50 pt-5 mt-2">
+                        <p class="text-gray-300 text-sm font-bold mb-3">هل تريد بيع حسابك الآن دون انتظار؟</p>
+                        <a href="https://chat.whatsapp.com/KlSYUiZqKMX66yvrZhEiYd?mode=gi_t" target="_blank" class="w-full bg-gradient-to-r from-[#25D366] to-[#1DA851] hover:from-[#1ebd5b] hover:to-[#178a41] text-white font-black text-lg py-3 px-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-[0_5px_15px_rgba(37,211,102,0.2)] hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(37,211,102,0.4)] border border-[#25D366]/50">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            بيع حسابي الآن 🛒
+                        </a>
+                    </div>
                 </div>`;
+
+                // تشغيل العداد الحي التنازلي
+                countdownInterval = setInterval(() => {
+                    const now = Date.now();
+                    const distance = rateLimit.nextAvailableTime - now;
+                    
+                    if (distance < 0) {
+                        clearInterval(countdownInterval);
+                        document.getElementById('countdown-timer').innerHTML = "جاهز! 🟢";
+                        document.getElementById('countdown-timer').classList.add("text-green-400");
+                        document.getElementById('countdown-timer').classList.remove("text-yellow-400");
+                    } else {
+                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                        document.getElementById('countdown-timer').innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    }
+                }, 1000);
+                
                 return;
             }
 
@@ -292,9 +325,7 @@
                     </div>
 
                     <a href="https://chat.whatsapp.com/KlSYUiZqKMX66yvrZhEiYd?mode=gi_t" target="_blank" class="w-full mb-6 bg-gradient-to-r from-[#25D366] to-[#1DA851] hover:from-[#1ebd5b] hover:to-[#178a41] text-white font-black text-lg py-3 px-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-[0_5px_15px_rgba(37,211,102,0.2)] hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(37,211,102,0.4)] border border-[#25D366]/50">
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                        </svg>
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                         بيع الحساب 🛒
                     </a>
                     
@@ -304,14 +335,22 @@
                     </div>
                 </div>`;
             } catch (e) {
+                // 🔥 رسالة الخطأ (عند فشل السيرفر) تطلب الإعادة وتحتوي على زر الواتساب 🔥
                 reportContent.innerHTML = `
                 <div class="bg-red-900/40 border border-red-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
                     <div class="text-red-400 mb-3">
                         <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
                     <p class='text-white font-bold text-lg mb-2'>عذراً، السيرفرات مزدحمة حالياً! ⏳</p>
-                    <p class='text-red-200 text-sm leading-relaxed'>يوجد ضغط كبير على الخوادم في هذا الوقت. يرجى إعادة المحاولة بالضغط على زر "فحص الآن" مرة أخرى.</p>
-                    <p class="text-[9px] text-red-400/50 mt-4" dir="ltr">${e.message}</p>
+                    <p class='text-red-200 text-sm leading-relaxed mb-6'>يوجد ضغط كبير على الخوادم في هذا الوقت. يرجى إعادة المحاولة بالضغط على زر "فحص الآن" مرة أخرى.</p>
+                    
+                    <div class="border-t border-gray-700/50 pt-5 mt-2">
+                        <p class="text-gray-300 text-sm font-bold mb-3">أو يمكنك بيع حسابك مباشرة عبر الواتساب:</p>
+                        <a href="https://chat.whatsapp.com/KlSYUiZqKMX66yvrZhEiYd?mode=gi_t" target="_blank" class="w-full bg-gradient-to-r from-[#25D366] to-[#1DA851] hover:from-[#1ebd5b] hover:to-[#178a41] text-white font-black text-lg py-3 px-4 rounded-xl flex items-center justify-center gap-3 transition-all shadow-[0_5px_15px_rgba(37,211,102,0.2)] hover:-translate-y-1 hover:shadow-[0_8px_20px_rgba(37,211,102,0.4)] border border-[#25D366]/50">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            بيع حسابي الآن 🛒
+                        </a>
+                    </div>
                 </div>`;
             } finally {
                 analyzeBtn.disabled = false;
