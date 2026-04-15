@@ -118,6 +118,7 @@
         function checkRateLimit() {
             let scans = JSON.parse(localStorage.getItem('doom_ai_scans')) || [];
             const now = Date.now();
+            
             scans = scans.filter(time => now - time < TIME_LIMIT_MS);
             localStorage.setItem('doom_ai_scans', JSON.stringify(scans));
             
@@ -278,8 +279,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        // 🔥 هذا هو الموديل الذي استخرجته أنت من خوادم Serverless (رخيص وقوي جداً) 🔥
-                        model: "Qwen/Qwen3.5-9B-FP8",
+                        // 🔥 الاسم البرمجي الصحيح 100% والمُعتمد في خوادم Serverless الرخيصة 🔥
+                        model: "Qwen/Qwen3.5-9B",
                         messages: [{
                             role: "user",
                             content: [
@@ -298,7 +299,7 @@
                     throw new Error(`HTTP Error ${response.status}: ` + (result.error?.message || JSON.stringify(result)));
                 }
 
-                // فلترة ذكية لرد الذكاء الاصطناعي لتفادي أي خطأ
+                // فلترة ذكية لرد الذكاء الاصطناعي
                 let aiText = result.choices[0].message.content;
                 aiText = aiText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
