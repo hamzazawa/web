@@ -279,12 +279,11 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        // 🔥 العودة إلى الموديل الأسطوري والمستقر الذي جلب 2100 فحص بنجاح وبأرخص سعر 🔥
-                        model: "Qwen/Qwen3-VL-8B-Instruct",
+                        // 🔥 موديل Gemma 4 من شركة جوجل، متوفر، رخيص، ويدعم الرؤية 🔥
+                        model: "google/gemma-4-31b-it-fp8",
                         messages: [{
                             role: "user",
                             content: [
-                                // تم تعديل البرومبت ليصبح صارماً جداً ويرجع JSON فقط
                                 { type: "text", text: "OCR Task: Extract eFootball collective strength and exactly 23 player overall ratings. You must return ONLY valid JSON format exactly like this: {\"strength\": 3210, \"ratings\": [102, 105]} Do not write any explanations or other text." },
                                 { type: "image_url", image_url: { url: compressedBase64 } }
                             ]
