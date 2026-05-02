@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -63,7 +62,7 @@
     </main>
 
     <footer class="mt-10 text-gray-500 text-xs text-center pb-6">
-        <p>جميع الحقوق محفوظة &copy; 2026 DOOMN STORE</p>
+        <p>جميع الحقوق محفوظة &copy; 2026 DOMINO STORE</p>
     </footer>
 
     <div id="whatsapp-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity">
@@ -77,7 +76,7 @@
             </p>
             <div class="flex flex-col gap-3">
                 <button onclick="proceedToWhatsapp()" class="w-full bg-[#25D366] hover:bg-[#1ebd5b] text-white font-black py-3 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382...z"/></svg>
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
                     نعم، الانتقال للواتساب
                 </button>
                 <button onclick="closeWhatsappModal()" class="w-full bg-gray-700/50 hover:bg-gray-700 border border-gray-600 text-gray-300 font-bold py-3 rounded-xl transition-all">
@@ -251,13 +250,11 @@
             resultContainer.classList.remove('hidden');
             reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-blue-500 w-10 h-10 border-4"></div><p class="text-blue-400 font-bold">الذكاء الاصطناعي يبحث عن سيرفر متاح...</p></div>`;
 
-            // 🔥 نظام الهجوم الآلي: قائمة بالموديلات المخصصة للصور المتاحة في المنصة 🔥
-            // الكود سيجربها بالترتيب حتى يقبل السيرفر أحدها ويستخرج البيانات
+            // 🔥 القائمة الذهبية المفلترة من حسابك مباشرة! 🔥
             const fallbackModels = [
-                "meta-llama/Llama-Vision-Free", // موديل مجاني ومفتوح دائماً
-                "Qwen/Qwen2.5-VL-72B-Instruct", // أحدث موديل من كوين وغالباً متاح
-                "Qwen/Qwen-VL-Chat", // موديل قديم ونادراً ما يتم حظره
-                "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo" // الموديل القياسي
+                "nim/meta/llama-3.2-11b-vision-instruct", // الموديل الدقيق الذي وجدته أنت
+                "Qwen/Qwen3-VL-32B-Instruct",             // موديل رؤية قوي متوفر في قائمتك
+                "Qwen/Qwen2.5-VL-72B-Instruct"            // بديل قوي جداً
             ];
 
             let success = false;
@@ -296,8 +293,8 @@
                     const result = await response.json();
                     
                     if (!response.ok) {
-                        lastErrorMsg = result.error?.message || "HTTP Error " + response.status;
-                        continue; // رفض السيرفر؟ جرب الموديل اللي بعده فوراً
+                        lastErrorMsg = `[${currentModel}] ` + (result.error?.message || "HTTP " + response.status);
+                        continue; 
                     }
 
                     let originalText = result.choices[0].message.content;
@@ -307,7 +304,7 @@
                     let endIndex = aiText.lastIndexOf('}');
                     
                     if (startIndex === -1 || endIndex === -1) {
-                        lastErrorMsg = "الموديل رد بنص غير صالح: " + originalText;
+                        lastErrorMsg = `[${currentModel}] رد بنص غير صالح: ` + originalText;
                         continue; 
                     }
 
@@ -330,7 +327,7 @@
                     }
 
                     if (validPlayersArray.length < 15) {
-                        lastErrorMsg = `قرأ ${validPlayersArray.length} لاعب فقط.`;
+                        lastErrorMsg = `[${currentModel}] قرأ ${validPlayersArray.length} لاعب فقط.`;
                         continue; 
                     }
 
@@ -349,17 +346,15 @@
                     if (finalPriceMAD < 0) finalPriceMAD = 0;
                     validCount = validPlayersArray.length;
 
-                    // نجحنا! السيرفر قبل وقرأ البيانات
                     success = true;
                     break; 
 
                 } catch (e) {
-                    lastErrorMsg = e.message;
-                    continue; // حدث خطأ عام؟ جرب الموديل التالي
+                    lastErrorMsg = `[${currentModel}] ` + e.message;
+                    continue; 
                 }
             }
 
-            // عرض النتيجة النهائية بعد محاولة اختراق كل الموديلات
             if (success) {
                 recordScan();
                 reportContent.innerHTML = `
@@ -386,14 +381,13 @@
                     </div>
                 </div>`;
             } else {
-                // إذا فشلت كل الموديلات فهذا يعني أن المنصة بها مشكلة عامة في الرؤية
                 reportContent.innerHTML = `
                 <div class="bg-red-950/90 border border-red-500 p-6 rounded-2xl text-center animate-fade-in-up">
                     <div class="text-red-400 mb-3">
                         <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
                     <p class='text-white font-bold text-xl mb-2'>⚠️ فشل الاتصال بالسيرفرات</p>
-                    <p class='text-red-200 text-sm mb-4'>تم تجربة جميع سيرفرات المنصة ولكن تم الرفض. السبب المرجح من الخادم:</p>
+                    <p class='text-red-200 text-sm mb-4'>تم تجربة جميع السيرفرات المتوفرة ولكن تم الرفض. السبب:</p>
                     <div class="bg-black/80 p-4 rounded-xl text-left overflow-x-auto border border-red-500/50 mb-6 shadow-inner">
                         <code class='text-red-400 text-sm font-mono whitespace-pre-wrap' dir="ltr">${lastErrorMsg}</code>
                     </div>
