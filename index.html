@@ -250,15 +250,15 @@
             resultContainer.classList.remove('hidden');
             reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-blue-500 w-10 h-10 border-4"></div><p class="text-blue-400 font-bold">الذكاء الاصطناعي يبحث عن سيرفر متاح...</p></div>`;
 
-            // 🔥 القائمة الذهبية المفلترة من حسابك مباشرة! 🔥
+            // 🔥 القائمة الذهبية المحدثة مع الموديل المجاني كنقطة أولى 🔥
             const fallbackModels = [
-                "nim/meta/llama-3.2-11b-vision-instruct", // الموديل الدقيق الذي وجدته أنت
-                "Qwen/Qwen3-VL-32B-Instruct",             // موديل رؤية قوي متوفر في قائمتك
-                "Qwen/Qwen2.5-VL-72B-Instruct"            // بديل قوي جداً
+                "meta-llama/Llama-Vision-Free", // الموديل المفتوح دائما للرؤية
+                "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo", 
+                "Qwen/Qwen-VL-Chat"
             ];
 
             let success = false;
-            let lastErrorMsg = "";
+            let errorLog = [];
             let finalStrength = 0;
             let finalRatingsHtml = '';
             let finalPriceMAD = 0;
@@ -267,7 +267,6 @@
 
             for (let i = 0; i < fallbackModels.length; i++) {
                 let currentModel = fallbackModels[i];
-                console.log("Trying model:", currentModel);
 
                 try {
                     const response = await fetch("https://api.together.xyz/v1/chat/completions", {
@@ -293,7 +292,7 @@
                     const result = await response.json();
                     
                     if (!response.ok) {
-                        lastErrorMsg = `[${currentModel}] ` + (result.error?.message || "HTTP " + response.status);
+                        errorLog.push(`[${currentModel}]: ` + (result.error?.message || "HTTP " + response.status));
                         continue; 
                     }
 
@@ -304,7 +303,7 @@
                     let endIndex = aiText.lastIndexOf('}');
                     
                     if (startIndex === -1 || endIndex === -1) {
-                        lastErrorMsg = `[${currentModel}] رد بنص غير صالح: ` + originalText;
+                        errorLog.push(`[${currentModel}] رد بنص غير صالح: ` + originalText);
                         continue; 
                     }
 
@@ -327,7 +326,7 @@
                     }
 
                     if (validPlayersArray.length < 15) {
-                        lastErrorMsg = `[${currentModel}] قرأ ${validPlayersArray.length} لاعب فقط.`;
+                        errorLog.push(`[${currentModel}] قرأ ${validPlayersArray.length} لاعب فقط.`);
                         continue; 
                     }
 
@@ -350,7 +349,7 @@
                     break; 
 
                 } catch (e) {
-                    lastErrorMsg = `[${currentModel}] ` + e.message;
+                    errorLog.push(`[${currentModel}] ` + e.message);
                     continue; 
                 }
             }
@@ -381,15 +380,16 @@
                     </div>
                 </div>`;
             } else {
+                let combinedErrors = errorLog.join('\n\n');
                 reportContent.innerHTML = `
                 <div class="bg-red-950/90 border border-red-500 p-6 rounded-2xl text-center animate-fade-in-up">
                     <div class="text-red-400 mb-3">
                         <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
-                    <p class='text-white font-bold text-xl mb-2'>⚠️ فشل الاتصال بالسيرفرات</p>
-                    <p class='text-red-200 text-sm mb-4'>تم تجربة جميع السيرفرات المتوفرة ولكن تم الرفض. السبب:</p>
+                    <p class='text-white font-bold text-xl mb-2'>⚠️ تم رفض جميع السيرفرات</p>
+                    <p class='text-red-200 text-sm mb-4'>قامت منصة Together AI بحظر حسابك من جميع موديلات الصور بما فيها المجانية! سجل الرفض الكامل:</p>
                     <div class="bg-black/80 p-4 rounded-xl text-left overflow-x-auto border border-red-500/50 mb-6 shadow-inner">
-                        <code class='text-red-400 text-sm font-mono whitespace-pre-wrap' dir="ltr">${lastErrorMsg}</code>
+                        <code class='text-red-400 text-xs font-mono whitespace-pre-wrap' dir="ltr">${combinedErrors}</code>
                     </div>
                     <div class="border-t border-gray-700/50 pt-5 mt-2">
                         <button onclick="openWhatsappModal()" class="w-full bg-gradient-to-r from-[#25D366] to-[#1DA851] hover:from-[#1ebd5b] hover:to-[#178a41] text-white font-black text-lg py-3 px-4 rounded-xl flex items-center justify-center gap-3 transition-all border border-[#25D366]/50">
