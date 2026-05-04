@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -47,7 +48,7 @@
                     <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                 </div>
                 <p class="text-gray-200 font-bold text-lg">اضغط لرفع صورة التشكيلة</p>
-                <p class="text-xs text-gray-500 mt-2">يتم رفع الصورة بأمان لتحليلها</p>
+                <p class="text-xs text-gray-500 mt-2">تحليل مجاني عبر Copilot Pro</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-2xl shadow-2xl mx-auto z-10">
         </div>
@@ -192,12 +193,12 @@
             if (!compressedBase64) return;
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader"></div> <span class="mr-2">جاري المعالجة...</span>';
+            analyzeBtn.innerHTML = '<div class="loader"></div> <span class="mr-2">جاري التجهيز...</span>';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-blue-500 w-10 h-10 border-4"></div><p class="text-blue-400 font-bold">الخطوة 1: يتم رفع الصورة للسيرفر المجاني...</p></div>`;
+            reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-blue-500 w-10 h-10 border-4"></div><p class="text-blue-400 font-bold">الخطوة 1: يتم تجهيز الصورة للصعود...</p></div>`;
 
             try {
-                // 1. رفع الصورة إلى ImgBB
+                // 1. رفع الصورة
                 let imageUrl = "";
                 try {
                     const base64Data = compressedBase64.split(',')[1];
@@ -218,52 +219,57 @@
                     throw new Error("خطأ في رفع الصورة: " + err.message);
                 }
 
-                reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-green-500 w-10 h-10 border-4"></div><p class="text-green-400 font-bold">الخطوة 2: الذكاء الاصطناعي (Copilot) يقرأ التشكيلة...</p></div>`;
+                reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-green-500 w-10 h-10 border-4"></div><p class="text-green-400 font-bold">الخطوة 2: Copilot يقرأ التشكيلة الآن...</p></div>`;
 
-                // 2. أمر استخراج JSON صارم جداً
-                const strictPrompt = "انت روبوت مبرمج. استخرج القوة الجماعية (strength) وطاقات اللاعبين (ratings) من الصورة. الرد يجب أن يكون كود JSON صالح فقط بدون أي كلمة إضافية. مثال: {\"strength\": 3210, \"ratings\": [102, 105]}";
+                // 2. إرسال الطلب لـ Copilot 
+                const strictPrompt = "استخرج القوة الجماعية (strength) وطاقات 23 لاعب (ratings). يجب أن يكون الرد فقط بصيغة JSON كالتالي: {\"strength\": 3210, \"ratings\": [102, 105]} بدون أي نص إضافي.";
                 const copilotUrl = `https://obito-mr-apis-2.vercel.app/api/ai/copilot?text=${encodeURIComponent(strictPrompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
                 
                 let apiResult = null;
 
-                // نظام تخطي الحظر الثلاثي (Direct -> CorsProxy -> AllOrigins)
+                // محاولة 1: اتصال مباشر
                 try {
-                    const res = await fetch(copilotUrl);
-                    apiResult = await res.json();
+                    const res1 = await fetch(copilotUrl);
+                    apiResult = await res1.json();
                 } catch (e1) {
+                    // محاولة 2: تخطي الحماية ببروكسي AllOrigins Raw الشفاف
                     try {
-                        const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(copilotUrl);
-                        const resProxy = await fetch(proxyUrl);
-                        apiResult = await resProxy.json();
+                        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(copilotUrl)}`;
+                        const res2 = await fetch(proxyUrl);
+                        apiResult = await res2.json();
                     } catch (e2) {
+                        // محاولة 3: بروكسي ThingProxy
                         try {
-                            const proxyUrl2 = `https://api.allorigins.win/get?url=${encodeURIComponent(copilotUrl)}`;
-                            const resProxy2 = await fetch(proxyUrl2);
-                            const proxyData = await resProxy2.json();
-                            apiResult = JSON.parse(proxyData.contents);
+                            const proxyUrl2 = `https://thingproxy.freeboard.io/fetch/${copilotUrl}`;
+                            const res3 = await fetch(proxyUrl2);
+                            apiResult = await res3.json();
                         } catch (e3) {
-                            throw new Error("تم حظر الاتصال بالكامل (Failed to fetch). يرجى إيقاف مانع الإعلانات (AdBlocker).");
+                            throw new Error("الاتصال محظور من المتصفح (CORS). تفاصيل الخطأ: " + e3.message);
                         }
                     }
                 }
 
-                if (!apiResult || !apiResult.success || !apiResult.answer) {
-                    throw new Error("سيرفرات Copilot لم تستجب بشكل صحيح.");
+                // 3. سحب النتائج عبر Keys (كما نصح صديقك)
+                let data = null;
+
+                if (apiResult && apiResult.strength !== undefined && apiResult.ratings !== undefined) {
+                    // إذا كان السيرفر يرجع البيانات في المفاتيح الرئيسية مباشرة
+                    data = apiResult;
+                } else if (apiResult && apiResult.answer) {
+                    // إذا كان السيرفر يرجع البيانات داخل مفتاح "answer"
+                    let answerText = apiResult.answer;
+                    let cleanText = answerText.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    let start = cleanText.indexOf('{');
+                    let end = cleanText.lastIndexOf('}');
+                    
+                    if (start !== -1 && end !== -1) {
+                        data = JSON.parse(cleanText.substring(start, end + 1));
+                    } else {
+                         throw new Error("API صديقك لم يطبع JSON، بل طبع هذا: \n" + answerText);
+                    }
+                } else {
+                     throw new Error("الرد غير مفهوم من السيرفر. الرد كامل هو: \n" + JSON.stringify(apiResult));
                 }
-
-                // 3. استخراج الـ JSON
-                let originalText = apiResult.answer;
-                let aiText = originalText.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-                let startIndex = aiText.indexOf('{');
-                let endIndex = aiText.lastIndexOf('}');
-                
-                if (startIndex === -1 || endIndex === -1) {
-                    throw new Error("الذكاء الاصطناعي لم يقرأ الأرقام بشكل صحيح.\n\nرسالته:\n" + originalText);
-                }
-
-                let jsonString = aiText.substring(startIndex, endIndex + 1);
-                let data = JSON.parse(jsonString);
 
                 let strength = parseInt(data.strength) || 0;
                 let playersTotalMAD = 0;
