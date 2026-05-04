@@ -48,7 +48,7 @@
                     <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
                 </div>
                 <p class="text-gray-200 font-bold text-lg">اضغط لرفع صورة التشكيلة</p>
-                <p class="text-xs text-gray-500 mt-2">يتم ضغط الصورة تلقائياً لتسريع الفحص</p>
+                <p class="text-xs text-gray-500 mt-2">التحليل عبر سيرفرات Copilot القوية</p>
             </div>
             <img id="preview" class="hidden w-full max-h-80 object-contain rounded-2xl shadow-2xl mx-auto z-10">
         </div>
@@ -88,7 +88,7 @@
     </div>
 
     <script>
-        // 🚀 ضع مفتاح IMGBB هنا (مجاني ويستغرق 10 ثواني من api.imgbb.com) 🚀
+        // مفتاح IMGBB الخاص بك لرفع الصور مؤقتاً
         const IMGBB_API_KEY = "d5ad99f4aed0d86e869b779414cab0e3";
         
         const fileInput = document.getElementById('file-input');
@@ -99,35 +99,12 @@
         const currencySelector = document.getElementById('currency-selector');
 
         let compressedBase64 = "";
-        let countdownInterval;
 
         function openWhatsappModal() { document.getElementById('whatsapp-modal').classList.remove('hidden'); }
         function closeWhatsappModal() { document.getElementById('whatsapp-modal').classList.add('hidden'); }
         function proceedToWhatsapp() {
             closeWhatsappModal();
             window.open("https://chat.whatsapp.com/La6D1R0Q8mGEz437MNDCnn?mode=gi_t", "_blank");
-        }
-
-        const MAX_SCANS = 10; // رفعنا العدد لأن الـ API مجاني!
-        const TIME_LIMIT_MS = 60 * 60 * 1000; 
-
-        function checkRateLimit() {
-            let scans = JSON.parse(localStorage.getItem('doom_ai_scans')) || [];
-            const now = Date.now();
-            scans = scans.filter(time => now - time < TIME_LIMIT_MS);
-            localStorage.setItem('doom_ai_scans', JSON.stringify(scans));
-            
-            if (scans.length >= MAX_SCANS) {
-                const nextAvailableTime = scans[0] + TIME_LIMIT_MS;
-                return { allowed: false, nextAvailableTime: nextAvailableTime };
-            }
-            return { allowed: true };
-        }
-
-        function recordScan() {
-            let scans = JSON.parse(localStorage.getItem('doom_ai_scans')) || [];
-            scans.push(Date.now());
-            localStorage.setItem('doom_ai_scans', JSON.stringify(scans));
         }
 
         document.getElementById('drop-area').onclick = () => fileInput.click();
@@ -139,7 +116,7 @@
                 reader.onload = (el) => {
                     const img = new Image();
                     img.onload = () => {
-                        const MAX_WIDTH = 1000;
+                        const MAX_WIDTH = 1200;
                         let width = img.width;
                         let height = img.height;
 
@@ -214,74 +191,52 @@
 
         analyzeBtn.onclick = async () => {
             if (!compressedBase64) return;
-            if(countdownInterval) clearInterval(countdownInterval);
-
-            const rateLimit = checkRateLimit();
-            if (!rateLimit.allowed) {
-                resultContainer.classList.remove('hidden');
-                reportContent.innerHTML = `
-                <div class="bg-yellow-900/30 border border-yellow-500/50 p-6 rounded-2xl text-center animate-fade-in-up">
-                    <div class="text-yellow-400 mb-3"><svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-                    <p class='text-white font-bold text-xl mb-2'>لقد استنفدت الحد المسموح به! ⚠️</p>
-                    <p class='text-yellow-200 text-sm leading-relaxed mb-4'>يرجى العودة بعد:</p>
-                    <div class="bg-black/40 rounded-xl py-3 px-6 inline-block mb-6 border border-yellow-500/20 shadow-inner">
-                        <span id="countdown-timer" class="text-4xl font-black text-yellow-400 tracking-wider" dir="ltr">--:--</span>
-                    </div>
-                    <div class="border-t border-gray-700/50 pt-5 mt-2">
-                        <button onclick="openWhatsappModal()" class="w-full bg-gradient-to-r from-[#25D366] to-[#1DA851] hover:from-[#1ebd5b] hover:to-[#178a41] text-white font-black text-lg py-3 px-4 rounded-xl flex items-center justify-center gap-3 transition-all border border-[#25D366]/50">بيع الحساب 🛒</button>
-                    </div>
-                </div>`;
-                countdownInterval = setInterval(() => {
-                    const now = Date.now();
-                    const distance = rateLimit.nextAvailableTime - now;
-                    if (distance < 0) {
-                        clearInterval(countdownInterval);
-                        document.getElementById('countdown-timer').innerHTML = "جاهز! 🟢";
-                        document.getElementById('countdown-timer').classList.replace("text-yellow-400", "text-green-400");
-                    } else {
-                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                        document.getElementById('countdown-timer').innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-                    }
-                }, 1000);
-                return;
-            }
 
             analyzeBtn.disabled = true;
-            analyzeBtn.innerHTML = '<div class="loader"></div> <span class="mr-2">جاري تحليل البيانات...</span>';
+            analyzeBtn.innerHTML = '<div class="loader"></div> <span class="mr-2">جاري المعالجة...</span>';
             resultContainer.classList.remove('hidden');
-            reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-blue-500 w-10 h-10 border-4"></div><p class="text-blue-400 font-bold">يتم رفع الصورة وبدء التحليل...</p></div>`;
+            reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-blue-500 w-10 h-10 border-4"></div><p class="text-blue-400 font-bold">الخطوة 1: تجهيز الصورة للصعود...</p></div>`;
 
             try {
-                // الخطوة 1: رفع الصورة إلى ImgBB للحصول على رابط مباشر
+                // 1. رفع الصورة إلى ImgBB (سيتم مسحها تلقائياً بعد 10 دقائق لتوفير المساحة)
                 const base64Data = compressedBase64.split(',')[1];
                 const formData = new FormData();
                 formData.append("image", base64Data);
 
-                const uploadRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+                const uploadRes = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}&expiration=600`, {
                     method: 'POST',
                     body: formData
                 });
                 
                 const uploadData = await uploadRes.json();
                 if (!uploadData.success) {
-                    throw new Error("فشل في رفع الصورة للحصول على الرابط. الرجاء التأكد من مفتاح ImgBB.");
+                    throw new Error("فشل في تجهيز الصورة. يرجى التأكد من مفتاح ImgBB.");
                 }
                 
                 const imageUrl = uploadData.data.url;
 
-                // الخطوة 2: إرسال الرابط إلى API صديقك
-                const strictPrompt = "استخرج القوة الجماعية (strength) وطاقات 23 لاعب (ratings). اكتب الرد فقط بصيغة JSON كالتالي: {\"strength\": 3210, \"ratings\": [102, 105]} بدون أي نص إضافي.";
+                reportContent.innerHTML = `<div class="flex flex-col items-center justify-center py-8"><div class="loader mb-4 border-t-green-500 w-10 h-10 border-4"></div><p class="text-green-400 font-bold">الخطوة 2: الذكاء الاصطناعي يقرأ التشكيلة الآن...</p></div>`;
+
+                // 2. إرسال الرابط إلى API صديقك (Copilot)
+                // تم وضع تعليمات صارمة جداً ليرجع Copilot الجواب كـ JSON فقط
+                const strictPrompt = "استخرج القوة الجماعية (strength) وطاقات 23 لاعب (ratings). يجب أن يكون الرد فقط بصيغة JSON كالتالي: {\"strength\": 3210, \"ratings\": [102, 105]} بدون أي كلمة إضافية.";
                 const copilotUrl = `https://obito-mr-apis-2.vercel.app/api/ai/copilot?text=${encodeURIComponent(strictPrompt)}&imageUrl=${encodeURIComponent(imageUrl)}`;
                 
-                const response = await fetch(copilotUrl);
+                // 3. تخطي حماية CORS باستخدام AllOrigins
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(copilotUrl)}`;
+                
+                const response = await fetch(proxyUrl);
+                if (!response.ok) {
+                    throw new Error("سيرفرات Copilot لا تستجيب حالياً.");
+                }
+                
                 const result = await response.json();
                 
                 if (!result.success || !result.answer) {
-                    throw new Error("API صديقك لم يرجع رداً صالحاً.");
+                    throw new Error("الـ API لم يرجع إجابة صالحة.");
                 }
 
-                // استخراج JSON من الرد
+                // 4. استخراج JSON من رد Copilot
                 let originalText = result.answer;
                 let aiText = originalText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
@@ -289,7 +244,7 @@
                 let endIndex = aiText.lastIndexOf('}');
                 
                 if (startIndex === -1 || endIndex === -1) {
-                    throw new Error("الـ API لم يُرجع البيانات بالشكل المطلوب.\n\nالرد:\n" + originalText);
+                    throw new Error("لم يتم العثور على أرقام واضحة في الصورة، أو الذكاء الاصطناعي رفض تنسيقها. \n\nالرد الحقيقي:\n" + originalText);
                 }
 
                 let jsonString = aiText.substring(startIndex, endIndex + 1);
@@ -317,7 +272,9 @@
                     });
                 }
 
-                if (validPlayersArray.length < 15) throw new Error(`⚠️ تم قراءة ${validPlayersArray.length} لاعب فقط. يرجى التأكد من وضوح طاقات اللاعبين في الصورة.`);
+                if (validPlayersArray.length < 15) {
+                    throw new Error(`⚠️ تم قراءة ${validPlayersArray.length} لاعب فقط. يرجى التأكد من وضوح طاقات اللاعبين.`);
+                }
 
                 let isPremium = (strength > 3219 || highTierCount > 4);
                 validPlayersArray.forEach(rNum => {
@@ -332,8 +289,6 @@
                 let bonusMAD = getStrengthBonusMAD(strength);
                 let finalPriceMAD = playersTotalMAD + bonusMAD + (Math.floor(Math.random() * 3) - 1);
                 if (finalPriceMAD < 0) finalPriceMAD = 0;
-
-                recordScan();
 
                 reportContent.innerHTML = `
                 <div class="glass rounded-[2rem] p-6 sm:p-8 border-t-4 border-blue-500 animate-fade-in-up">
